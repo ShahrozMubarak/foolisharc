@@ -364,11 +364,14 @@ app.get('/api/orders/:orderNumber', async (req, res) => {
     if (!isDBConnected()) {
       return res.status(503).json({ error: 'MongoDB not connected' });
     }
-    const query = req.params.orderNumber.toUpperCase();
+    const rawQuery = String(req.params.orderNumber || '').trim();
+    const queryRegex = new RegExp(`^${rawQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const order = await Order.findOne({
       $or: [
-        { orderNumber: query },
-        { id: query }
+        { orderNumber: queryRegex },
+        { id: queryRegex },
+        { orderNumber: rawQuery },
+        { id: rawQuery }
       ]
     });
     if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -489,18 +492,33 @@ app.patch('/api/orders/:id/status', requireAdminAuth, async (req, res) => {
       return res.status(503).json({ error: 'MongoDB not connected' });
     }
     const orderParam = req.params.id;
-    const filter = mongoose.Types.ObjectId.isValid(orderParam)
-      ? { $or: [{ _id: orderParam }, { id: orderParam }, { orderNumber: orderParam }] }
-      : { $or: [{ id: orderParam }, { orderNumber: orderParam }] };
+    const { status, trackingNumber, courier, cancelReason, cancelNote, review } = req.body || {};
+    const normalizedStatus = status ? String(status).toLowerCase().trim() : 'pending';
+    const rawParam = String(orderParam || '').trim();
+    const safeRegex = new RegExp(`^${rawParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const filter = mongoose.Types.ObjectId.isValid(rawParam)
+      ? { $or: [{ _id: rawParam }, { id: safeRegex }, { orderNumber: safeRegex }, { id: rawParam }, { orderNumber: rawParam }] }
+      : { $or: [{ id: safeRegex }, { orderNumber: safeRegex }, { id: rawParam }, { orderNumber: rawParam }] };
+    
+    const updatePayload = { status: normalizedStatus };
+    if (trackingNumber) updatePayload.trackingNumber = trackingNumber;
+    if (courier) updatePayload.courier = courier;
+    if (cancelReason) updatePayload.cancelReason = cancelReason;
+    if (cancelNote) updatePayload.cancelNote = cancelNote;
+    if (review) updatePayload.review = review;
+    if (normalizedStatus === 'approved') {
+      updatePayload.approvedAt = new Date();
+    }
+
     const updated = await Order.findOneAndUpdate(
       filter,
-      { status },
+      updatePayload,
       { returnDocument: 'after' }
     );
     if (!updated) return res.status(404).json({ error: 'Order not found' });
 
     // Trigger Automated Order Status Email to Customer
-    sendOrderStatusEmail(updated, status).catch((err) => {
+    sendOrderStatusEmail(updated, normalizedStatus).catch((err) => {
       console.warn('⚠️ [Email Service] Background order status email note:', err.message);
     });
 
@@ -523,9 +541,11 @@ app.post('/api/orders/:id/approve', requireAdminAuth, async (req, res) => {
     const orderId = req.params.id;
     const generatedTracking = `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
 
-    const filter = mongoose.Types.ObjectId.isValid(orderId)
-      ? { $or: [{ _id: orderId }, { id: orderId }, { orderNumber: orderId }] }
-      : { $or: [{ id: orderId }, { orderNumber: orderId }] };
+    const rawParam = String(orderId || '').trim();
+    const safeRegex = new RegExp(`^${rawParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const filter = mongoose.Types.ObjectId.isValid(rawParam)
+      ? { $or: [{ _id: rawParam }, { id: safeRegex }, { orderNumber: safeRegex }, { id: rawParam }, { orderNumber: rawParam }] }
+      : { $or: [{ id: safeRegex }, { orderNumber: safeRegex }, { id: rawParam }, { orderNumber: rawParam }] };
 
     const updated = await Order.findOneAndUpdate(
       filter,

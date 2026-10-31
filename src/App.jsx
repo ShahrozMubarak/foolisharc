@@ -671,10 +671,21 @@ export default function App() {
   };
 
   const handleUpdateOrderStatus = (orderId, newStatus) => {
+    const cleanId = String(orderId || '').toLowerCase().trim();
+    const normalizedStatus = String(newStatus || 'pending').toLowerCase().trim();
     setOrders(prev =>
-      prev.map(ord => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
+      prev.map(ord => {
+        if (!ord) return ord;
+        const num = String(ord.orderNumber || '').toLowerCase().trim();
+        const id = String(ord.id || '').toLowerCase().trim();
+        const mongoId = String(ord._id || '').toLowerCase().trim();
+        if (num === cleanId || id === cleanId || mongoId === cleanId) {
+          return { ...ord, status: normalizedStatus };
+        }
+        return ord;
+      })
     );
-    API.updateOrderStatusInDB(orderId, newStatus);
+    API.updateOrderStatusInDB(orderId, normalizedStatus);
   };
 
   // Product Inventory Handlers (for Studio)

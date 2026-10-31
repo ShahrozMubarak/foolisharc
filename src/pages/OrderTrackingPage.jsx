@@ -56,10 +56,15 @@ export default function OrderTrackingPage() {
       // 2. Check localStorage fallback
       try {
         const savedOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-        const found = savedOrders.find(
-          o => (o.orderNumber && o.orderNumber.toUpperCase() === orderId.toUpperCase()) ||
-               (o.id && o.id.toUpperCase() === orderId.toUpperCase())
-        );
+        const cleanOrderId = String(orderId || '').toLowerCase().trim();
+        const found = Array.isArray(savedOrders) ? savedOrders.find(
+          o => {
+            if (!o) return false;
+            const num = String(o.orderNumber || '').toLowerCase().trim();
+            const id = String(o.id || '').toLowerCase().trim();
+            return (num && num === cleanOrderId) || (id && id === cleanOrderId);
+          }
+        ) : null;
 
         if (found && isMounted) {
           setOrder(found);
@@ -188,15 +193,16 @@ export default function OrderTrackingPage() {
     // Persist directly to local storage cache
     try {
       const saved = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-      const updatedList = saved.map(o => {
-        if (
-          (o.orderNumber && o.orderNumber.toUpperCase() === orderIdentifier.toUpperCase()) ||
-          (o.id && o.id.toUpperCase() === orderIdentifier.toUpperCase())
-        ) {
+      const cleanIdent = String(orderIdentifier || '').toLowerCase().trim();
+      const updatedList = Array.isArray(saved) ? saved.map(o => {
+        if (!o) return o;
+        const num = String(o.orderNumber || '').toLowerCase().trim();
+        const id = String(o.id || '').toLowerCase().trim();
+        if ((num && num === cleanIdent) || (id && id === cleanIdent)) {
           return { ...o, status: 'cancelled', ...cancelData };
         }
         return o;
-      });
+      }) : [];
       localStorage.setItem('zaytoun_orders', JSON.stringify(updatedList));
     } catch {}
 
@@ -414,13 +420,13 @@ export default function OrderTrackingPage() {
                     key={st}
                     type="button"
                     onClick={() => handleDemoStatusChange(st)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold lowercase tracking-wider transition cursor-pointer ${
                       (order.status || '').toLowerCase() === st
                         ? 'bg-[#7A4B26] text-white shadow-xs'
                         : 'bg-white dark:bg-[#2A221C] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100'
                     }`}
                   >
-                    {st}
+                    {st.toLowerCase()}
                   </button>
                 ))}
               </div>

@@ -158,13 +158,22 @@ export default function AdminDashboard({
   useEffect(() => {
     if (propOrders && propOrders.length > 0) {
       setLiveOrders(prev => {
-        const hasAtlas = prev.some(o => o._id);
-        if (hasAtlas) {
-          const existing = new Set(prev.map(o => o.orderNumber || o.id));
-          const additions = propOrders.filter(o => !existing.has(o.orderNumber || o.id));
-          return [...prev, ...additions];
-        }
-        return propOrders;
+        if (!prev || prev.length === 0) return propOrders;
+        const prevMap = new Map();
+        prev.forEach(o => {
+          if (o) {
+            const key = String(o._id || o.orderNumber || o.id).toLowerCase();
+            prevMap.set(key, o);
+          }
+        });
+        const merged = propOrders.map(po => {
+          const key = String(po._id || po.orderNumber || po.id).toLowerCase();
+          const existing = prevMap.get(key);
+          return existing ? { ...po, ...existing } : po;
+        });
+        const mergedKeys = new Set(merged.map(o => String(o._id || o.orderNumber || o.id).toLowerCase()));
+        const extras = prev.filter(o => o && !mergedKeys.has(String(o._id || o.orderNumber || o.id).toLowerCase()));
+        return [...merged, ...extras];
       });
     }
   }, [propOrders]);
@@ -311,45 +320,90 @@ export default function AdminDashboard({
     return liveOrders.filter((order) => {
       const statusMatch =
         orderFilterStatus === 'all' ||
-        (order.status || 'processing').toLowerCase() === orderFilterStatus.toLowerCase();
+        (order.status || 'pending').toLowerCase() === orderFilterStatus.toLowerCase();
       const q = globalSearch.trim().toLowerCase();
       const searchMatch =
         !q ||
-        (order.orderNumber && order.orderNumber.toLowerCase().includes(q)) ||
-        (order.customer?.firstName && order.customer.firstName.toLowerCase().includes(q)) ||
-        (order.customer?.lastName && order.customer.lastName.toLowerCase().includes(q)) ||
-        (order.customer?.email && order.customer.email.toLowerCase().includes(q)) ||
-        (order.customer?.phone && order.customer.phone.toLowerCase().includes(q)) ||
-        (order.customer?.city && order.customer.city.toLowerCase().includes(q));
+        (order.orderNumber && String(order.orderNumber).toLowerCase().includes(q)) ||
+        (order.customer?.firstName && String(order.customer.firstName).toLowerCase().includes(q)) ||
+        (order.customer?.lastName && String(order.customer.lastName).toLowerCase().includes(q)) ||
+        (order.customer?.email && String(order.customer.email).toLowerCase().includes(q)) ||
+        (order.customer?.phone && String(order.customer.phone).toLowerCase().includes(q)) ||
+        (order.customer?.city && String(order.customer.city).toLowerCase().includes(q));
       return statusMatch && searchMatch;
     });
   }, [liveOrders, orderFilterStatus, globalSearch]);
 
   // Handle Order Status Change
   const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      await updateOrderStatusInDB(orderId, newStatus);
-      setLiveOrders(prev =>
-        prev.map(o => (o._id === orderId || o.id === orderId || o.orderNumber === orderId ? { ...o, status: newStatus } : o))
-      );
-      if (selectedOrderDetails) {
-        setSelectedOrderDetails(prev => ({ ...prev, status: newStatus }));
-      }
-      notifyOrderStatusChange({ id: orderId, status: newStatus });
-      showToast(`Order status updated to ${newStatus}`);
-    } catch (err) {
-      console.error("Error updating order status:", err);
-      alert("Error updating order status: " + err.message);
+    if (!orderId) {
+      console.warn("handleStatusChange called without orderId");
+      return;
     }
+    const cleanId = String(orderId).toLowerCase().trim();
+    const normalizedStatus = String(newStatus || 'pending').toLowerCase().trim();
+
+    // 1. Immediately update local state in AdminDashboard
+    setLiveOrders(prev =>
+      prev.map(o => {
+        if (!o) return o;
+        const num = String(o.orderNumber || '').toLowerCase().trim();
+        const id = String(o.id || '').toLowerCase().trim();
+        const mongoId = String(o._id || '').toLowerCase().trim();
+        if (num === cleanId || id === cleanId || mongoId === cleanId) {
+          return { ...o, status: normalizedStatus };
+        }
+        return o;
+      })
+    );
+
+    if (selectedOrderDetails) {
+      const modalNum = String(selectedOrderDetails.orderNumber || '').toLowerCase().trim();
+      const modalId = String(selectedOrderDetails.id || '').toLowerCase().trim();
+      const modalMongoId = String(selectedOrderDetails._id || '').toLowerCase().trim();
+      if (modalNum === cleanId || modalId === cleanId || modalMongoId === cleanId) {
+        setSelectedOrderDetails(prev => (prev ? { ...prev, status: normalizedStatus } : null));
+      }
+    }
+
+    // 2. Persist to MongoDB and local storage
+    try {
+      await updateOrderStatusInDB(orderId, normalizedStatus);
+    } catch (e) {
+      console.warn("updateOrderStatusInDB note:", e);
+    }
+
+    // 3. Notify parent component (App.jsx)
+    if (typeof onUpdateOrderStatus === 'function') {
+      try {
+        onUpdateOrderStatus(orderId, normalizedStatus);
+      } catch (err) {
+        console.warn("onUpdateOrderStatus note:", err);
+      }
+    }
+
+    // 4. Send background notification & toast
+    try {
+      notifyOrderStatusChange(orderId, normalizedStatus);
+    } catch (notifErr) {
+      console.warn("Notification error:", notifErr);
+    }
+    showToast(`Order status updated to ${normalizedStatus}`);
   };
 
   // Handle Order Approval & Transcript
   const handleApproveOrder = async (order) => {
+    if (!order) return;
     const orderId = order._id || order.id || order.orderNumber;
+    if (!orderId) {
+      alert("Cannot approve order: missing order reference ID");
+      return;
+    }
+    const cleanId = String(orderId).toLowerCase().trim();
     setApprovalLoading(true);
     try {
       const res = await approveOrderInDB(orderId);
-      const trackingNumber = res?.order?.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
+      const trackingNumber = res?.trackingNumber || res?.order?.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
       const updatedOrder = {
         ...order,
         status: 'approved',
@@ -359,12 +413,36 @@ export default function AdminDashboard({
       };
 
       setLiveOrders(prev =>
-        prev.map(o => (o._id === orderId || o.id === orderId || o.orderNumber === orderId ? { ...o, ...updatedOrder } : o))
+        prev.map(o => {
+          if (!o) return o;
+          const num = String(o.orderNumber || '').toLowerCase().trim();
+          const id = String(o.id || '').toLowerCase().trim();
+          const mongoId = String(o._id || '').toLowerCase().trim();
+          if (num === cleanId || id === cleanId || mongoId === cleanId) {
+            return { ...o, ...updatedOrder };
+          }
+          return o;
+        })
       );
       setSelectedOrderDetails(prev => (prev ? { ...prev, ...updatedOrder } : null));
-      notifyOrderApproved(updatedOrder);
 
-      const cleanPhone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
+      try {
+        await updateOrderStatusInDB(orderId, 'approved', { trackingNumber, courier: 'TCS Express', approvedAt: new Date().toISOString() });
+      } catch (e) {}
+
+      if (typeof onUpdateOrderStatus === 'function') {
+        try {
+          onUpdateOrderStatus(orderId, 'approved');
+        } catch {}
+      }
+
+      try {
+        notifyOrderApproved(updatedOrder);
+      } catch (notifErr) {
+        console.warn("Notification error:", notifErr);
+      }
+
+      const cleanPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '');
       const formattedPhone = cleanPhone.startsWith('0')
         ? '92' + cleanPhone.slice(1)
         : (cleanPhone.startsWith('92') ? cleanPhone : '92' + cleanPhone);
@@ -376,7 +454,7 @@ export default function AdminDashboard({
       window.open(waUrl, '_blank');
     } catch (err) {
       console.error("Error approving order:", err);
-      alert("Error approving order: " + err.message);
+      alert("Error approving order: " + (err?.message || String(err)));
     } finally {
       setApprovalLoading(false);
     }
@@ -395,7 +473,7 @@ FOOLISH ARC — VERIFIED ORDER TRANSCRIPT
 =======================================================
 Order Reference: #${order.orderNumber || order.id || 'N/A'}
 Date & Time:    ${dateStr}
-Status:         ${(order.status || 'pending').toUpperCase()}
+Status:         ${(order.status || 'pending').toLowerCase()}
 Verification:   256-Bit SSL Atelier Certified
 
 CUSTOMER DOSSIER:
@@ -405,7 +483,7 @@ Contact Phone:  ${order.customer?.phone || 'N/A'}
 Destination:    ${order.customer?.address || 'N/A'}, ${order.customer?.city || 'Pakistan'}
 
 SETTLEMENT & PAYMENT:
-Payment Method: ${(order.paymentMethod || 'COD').toUpperCase()}
+Payment Method: ${String(order.paymentMethod || 'cod').toLowerCase()}
 Total Amount:   PKR ${(order.total || order.pricing?.finalTotal || 0).toLocaleString()}
 Courier Partner: ${order.courier || 'TCS Express'}
 Consignment No: ${order.trackingNumber || 'Pending Dispatch Assignment'}
@@ -1194,9 +1272,11 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                               PKR {(ord.total || ord.pricing?.finalTotal || 0).toLocaleString()}
                             </td>
                             <td className="py-3 px-3">
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black lowercase ${
                                 status === 'approved' || status === 'delivered'
                                   ? 'bg-emerald-100 text-emerald-800'
+                                  : status === 'cancelled'
+                                  ? 'bg-red-100 text-red-800'
                                   : status === 'pending'
                                   ? 'bg-amber-100 text-amber-800'
                                   : 'bg-neutral-100 text-neutral-800'
@@ -1381,13 +1461,15 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                   <select
                     value={orderFilterStatus}
                     onChange={(e) => setOrderFilterStatus(e.target.value)}
-                    className="px-3.5 py-2 rounded-xl bg-white border border-black/10 text-xs font-bold text-neutral-800 shadow-sm focus:outline-none cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-white border border-black/10 text-xs font-bold text-neutral-800 shadow-sm focus:outline-none cursor-pointer lowercase"
                   >
-                    <option value="all">All Statuses</option>
-                    <option value="pending">Pending Verification</option>
-                    <option value="approved">Approved & Dispatched</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="all">all statuses</option>
+                    <option value="pending">pending</option>
+                    <option value="approved">approved</option>
+                    <option value="processing">processing</option>
+                    <option value="shipped">shipped</option>
+                    <option value="delivered">delivered</option>
+                    <option value="cancelled">cancelled</option>
                   </select>
                 </div>
               </div>
@@ -1463,7 +1545,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                               <select
                                 value={status}
                                 onChange={(e) => handleStatusChange(ord._id || ord.id || ord.orderNumber, e.target.value)}
-                                className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider focus:outline-none cursor-pointer border-none shadow-2xs ${
+                                className={`px-2.5 py-1 rounded-xl text-xs font-black lowercase tracking-wider focus:outline-none cursor-pointer border-none shadow-2xs ${
                                   status === 'approved' || status === 'delivered'
                                     ? 'bg-emerald-100 text-emerald-800'
                                     : status === 'cancelled'
@@ -1473,12 +1555,12 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                                     : 'bg-neutral-100 text-neutral-800'
                                 }`}
                               >
-                                <option value="pending">Pending</option>
-                                <option value="approved">Approved</option>
-                                <option value="processing">Processing</option>
-                                <option value="shipped">Shipped</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="pending">pending</option>
+                                <option value="approved">approved</option>
+                                <option value="processing">processing</option>
+                                <option value="shipped">shipped</option>
+                                <option value="delivered">delivered</option>
+                                <option value="cancelled">cancelled</option>
                               </select>
                             </td>
                             <td className="py-3.5 px-3 text-right space-x-2">
@@ -1900,8 +1982,8 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 <span className="text-xs font-black tracking-widest text-[#9A6E3E] uppercase">
                   OFFICIAL ORDER DOSSIER
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                  Verified
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black lowercase">
+                  {(selectedOrderDetails.status || 'pending').toLowerCase()}
                 </span>
               </div>
               <h3 className="text-2xl font-black tracking-tight text-neutral-900 mt-1">
@@ -1936,7 +2018,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                   {selectedOrderDetails.customer?.address || 'Standard Address'}
                 </div>
                 <div className="text-[11px] text-neutral-500 font-bold">
-                  Payment: {(selectedOrderDetails.paymentMethod || 'COD').toUpperCase()}
+                  Payment: {String(selectedOrderDetails.paymentMethod || 'cod').toLowerCase()}
                 </div>
               </div>
             </div>
@@ -2060,17 +2142,32 @@ FOOLISH ARC Atelier | contact@foolisharc.com
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-black/10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-black/10">
               <div className="text-base font-black text-neutral-900">
                 Total: PKR {(selectedOrderDetails.total || selectedOrderDetails.pricing?.finalTotal || 0).toLocaleString()}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+                  <span className="lowercase">status:</span>
+                  <select
+                    value={(selectedOrderDetails.status || 'pending').toLowerCase()}
+                    onChange={(e) => handleStatusChange(selectedOrderDetails._id || selectedOrderDetails.id || selectedOrderDetails.orderNumber, e.target.value)}
+                    className="px-2.5 py-1 rounded-xl text-xs font-black lowercase tracking-wider border border-black/10 bg-neutral-50 text-neutral-800 focus:outline-none cursor-pointer"
+                  >
+                    <option value="pending">pending</option>
+                    <option value="approved">approved</option>
+                    <option value="processing">processing</option>
+                    <option value="shipped">shipped</option>
+                    <option value="delivered">delivered</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </div>
                 {selectedOrderDetails.status === 'pending' && (
                   <button
                     type="button"
                     onClick={() => handleApproveOrder(selectedOrderDetails)}
                     disabled={approvalLoading}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm"
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm cursor-pointer"
                   >
                     Approve &amp; Dispatch TCS
                   </button>
@@ -2078,7 +2175,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 <button
                   type="button"
                   onClick={() => setSelectedOrderDetails(null)}
-                  className="px-4 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
+                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs cursor-pointer transition"
                 >
                   Close Dossier
                 </button>

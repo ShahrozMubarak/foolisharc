@@ -149,19 +149,27 @@ export function notifyOrderApproved(order) {
  * Trigger notification on Order Status Update (Dispatched / Delivered)
  */
 export function notifyOrderStatusChange(orderNum, status) {
-  const statusUpper = status.toUpperCase();
-  let message = `Order #${orderNum} status updated to ${statusUpper}.`;
-  if (status === 'dispatched') {
-    message = `Order #${orderNum} has been handed to TCS Express courier for priority delivery.`;
-  } else if (status === 'delivered') {
-    message = `Order #${orderNum} has been delivered. Thank you for choosing Foolish Arc slow fashion.`;
+  let orderId = orderNum;
+  let statusVal = status;
+  if (typeof orderNum === 'object' && orderNum !== null) {
+    orderId = orderNum.id || orderNum.orderNumber;
+    statusVal = orderNum.status;
+  }
+  const cleanStatus = (statusVal || 'pending').toLowerCase();
+  let message = `Order #${orderId} status updated to ${cleanStatus}.`;
+  if (cleanStatus === 'dispatched' || cleanStatus === 'shipped') {
+    message = `Order #${orderId} has been handed to TCS Express courier for priority delivery.`;
+  } else if (cleanStatus === 'delivered') {
+    message = `Order #${orderId} has been delivered. Thank you for choosing Foolish Arc slow fashion.`;
+  } else if (cleanStatus === 'approved') {
+    message = `Order #${orderId} has been verified and approved for tailoring & dispatch.`;
   }
 
   return sendSystemNotification({
-    title: `FOOLISH ARC • Status: ${statusUpper}`,
+    title: `FOOLISH ARC • status: ${cleanStatus}`,
     body: message,
-    tag: `order-status-${orderNum}-${status}`,
-    url: `/track/${orderNum}`
+    tag: `order-status-${orderId}-${cleanStatus}`,
+    url: `/track/${orderId}`
   });
 }
 
