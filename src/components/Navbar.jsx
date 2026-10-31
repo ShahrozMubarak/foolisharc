@@ -51,7 +51,7 @@ export default function Navbar({
       <div className="max-w-[1600px] mx-auto px-3 sm:px-8 lg:px-12 h-16 sm:h-20 flex items-center justify-between">
         
         {/* Brand Logo - Bespoke Luxury Atelier Monogram & Wide-Tracked Wordmark */}
-        <BrandLogo size="md" />
+        <BrandLogo size=<div className="flex items-center"><BrandLogo size="md" /><span className="inline-block w-2.5 h-2.5 rounded-full bg-[#1dbf73] ml-1 shadow-[0_0_8px_#1dbf73]" title="Live & Online" /></div>"md" />
 
         {/* Bold Center Navigation */}
         <nav className="hidden md:flex items-center space-x-8 lg:space-x-10">
