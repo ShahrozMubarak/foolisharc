@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import { fetchOrderByNumber, updateOrderStatusInDB } from '../services/api';
+import OrderConfirmationModal from '../components/OrderConfirmationModal';
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
@@ -12,6 +13,7 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Cancellation State & Modal
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -254,14 +256,6 @@ export default function OrderTrackingPage() {
     setTimeout(() => setSubmittedReviewToast(false), 4000);
   };
 
-  // Status Switcher Helper (For testing & demo)
-  const handleDemoStatusChange = async (newStatus) => {
-    if (!order) return;
-    const orderIdentifier = order.orderNumber || order.id || order._id;
-    await updateOrderStatusInDB(orderIdentifier, newStatus);
-    setOrder(prev => ({ ...prev, status: newStatus }));
-  };
-
   const stages = [
     { key: 'placed', label: 'Order Placed', desc: 'Proof Attached & Authenticated' },
     { key: 'verified', label: 'Studio Verified', desc: 'Proof Approved in Studio' },
@@ -387,11 +381,12 @@ export default function OrderTrackingPage() {
                 
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition cursor-pointer shadow-2xs"
-                  title="Print Tax Invoice"
+                  onClick={() => setShowReceiptModal(true)}
+                  className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition cursor-pointer shadow-2xs flex items-center space-x-1.5"
+                  title="View Official Thermal Receipt"
                 >
-                  🖨️ Receipt
+                  <span>🖨️</span>
+                  <span>Receipt</span>
                 </button>
 
                 {/* Cancel Order Option (Available before delivery or cancellation) */}
@@ -406,29 +401,6 @@ export default function OrderTrackingPage() {
                     <span>Cancel Consignment</span>
                   </button>
                 )}
-              </div>
-            </div>
-
-            {/* Quick Interactive Status Switcher (For Demo & Seamless Flow Testing) */}
-            <div className="bg-[#FAF6F0] dark:bg-[#1E1915] rounded-xl px-4 py-2.5 border border-[#E6D3B3]/60 dark:border-[#382F26] flex items-center justify-between text-xs font-mono">
-              <span className="text-[#8C6A3E] dark:text-[#E6D3B3] font-bold uppercase tracking-wider text-[11px]">
-                Consignment State Simulator:
-              </span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {['pending', 'processing', 'dispatched', 'delivered', 'cancelled'].map(st => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => handleDemoStatusChange(st)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold lowercase tracking-wider transition cursor-pointer ${
-                      (order.status || '').toLowerCase() === st
-                        ? 'bg-[#7A4B26] text-white shadow-xs'
-                        : 'bg-white dark:bg-[#2A221C] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100'
-                    }`}
-                  >
-                    {st.toLowerCase()}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -1043,6 +1015,15 @@ export default function OrderTrackingPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Official Thermal Receipt Extrusion Modal */}
+      {showReceiptModal && order && (
+        <OrderConfirmationModal
+          order={order}
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+        />
       )}
 
     </div>

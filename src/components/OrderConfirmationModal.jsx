@@ -104,11 +104,17 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
 
   const handleGoToTracking = () => {
     if (onClose) onClose();
-    navigate(`/track/${orderId}`);
+    const targetPath = `/track/${orderId}`;
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
   };
 
   const handleSaveInvoice = () => {
-    window.print();
+    setIsExtruding(true);
+    setTimeout(() => {
+      window.print();
+    }, 50);
   };
 
   if (!order || (isOpen !== undefined && !isOpen)) return null;
@@ -119,19 +125,21 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
 
   const clientEmail = typeof safeOrder.customer === 'object'
     ? (safeOrder.customer?.email || 'client@foolisharc.com')
-    : 'client@foolisharc.com';
+    : (safeOrder.email || 'client@foolisharc.com');
 
   const clientCity = typeof safeOrder.customer === 'object'
     ? (safeOrder.customer?.city || safeOrder.customer?.address || 'Lahore, PK')
-    : 'Lahore, PK';
+    : (safeOrder.city || safeOrder.address || 'Lahore, PK');
+
+  const isAlreadyOnTrackPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/track');
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fadeIn select-none">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fadeIn select-none pos-receipt-modal">
       
       {/* Top Close Button */}
       <button
         onClick={onClose}
-        className="fixed top-5 right-5 z-50 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition cursor-pointer"
+        className="fixed top-5 right-5 z-50 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition cursor-pointer no-print"
         aria-label="Close"
       >
         ✕
@@ -141,7 +149,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
       <div className="w-full max-w-sm my-auto flex flex-col items-center">
         
         {/* Minimalist Dispenser Mouth */}
-        <div className="w-full bg-[#FAF9F6] border border-[#E6D3B3] rounded-t-2xl px-4 py-3 shadow-md flex items-center justify-between font-mono">
+        <div className="w-full bg-[#FAF9F6] border border-[#E6D3B3] rounded-t-2xl px-4 py-3 shadow-md flex items-center justify-between font-mono pos-dispenser-mouth no-print">
           <div className="flex items-center space-x-2">
             <span className={`w-2 h-2 rounded-full ${isExtruding ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
             <span className="text-[11px] font-bold uppercase tracking-wider text-black">
@@ -154,7 +162,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
         </div>
 
         {/* Paper Mouth Slot */}
-        <div className="w-full pos-paper-mouth">
+        <div className="w-full pos-paper-mouth no-print">
           <div className="pos-serrated-blade" />
         </div>
 
@@ -205,7 +213,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                 <div className="flex justify-between">
                   <span className="text-neutral-500">SETTLEMENT</span>
                   <span className="font-bold uppercase text-[#9A6E3E]">
-                    {safeOrder.paymentMethod || 'COD'}
+                    {safeOrder.paymentMethod === 'bank_transfer' ? 'BANK TRANSFER' : (safeOrder.paymentMethod || 'COD')}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -255,18 +263,38 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                 </div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border font-mono font-bold text-[10px] tracking-wider uppercase border-[#C69F6F] text-[#9A6E3E]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#C69F6F]"></span>
-                  <span>VERIFIED</span>
+                  <span>{String(safeOrder.status || 'VERIFIED').toUpperCase()}</span>
                 </span>
               </div>
 
-              {/* Clean Serialized Barcode Graphic */}
+              {/* Clean Serialized Barcode Graphic (Vector SVG for flawless print fidelity) */}
               <div className="pt-2 text-center space-y-1">
-                <div
-                  className="h-7 w-full mx-auto"
-                  style={{
-                    background: 'repeating-linear-gradient(90deg, #111418 0px, #111418 2px, transparent 2px, transparent 4px, #111418 4px, #111418 7px, transparent 7px, transparent 9px, #111418 9px, #111418 11px, transparent 11px, transparent 14px)'
-                  }}
-                />
+                <div className="pos-barcode-graphic flex justify-center items-center h-8 w-full px-2 overflow-hidden">
+                  <svg
+                    className="w-full h-8"
+                    viewBox="0 0 280 32"
+                    preserveAspectRatio="none"
+                    style={{ shapeRendering: 'crispEdges' }}
+                  >
+                    {[
+                      3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 4, 2, 2, 1, 3, 2, 4,
+                      1, 2, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 3, 1, 2, 1, 4, 2, 1, 3,
+                      2, 4, 1, 3, 1, 2, 4, 2, 1, 3, 2, 1, 4, 3, 1, 2, 3, 1, 4, 2
+                    ].map((width, i, arr) => {
+                      const xOffset = arr.slice(0, i).reduce((acc, w) => acc + w * 1.5 + 2, 4);
+                      return (
+                        <rect
+                          key={i}
+                          x={xOffset}
+                          y={0}
+                          width={width * 1.5}
+                          height={32}
+                          fill="#111418"
+                        />
+                      );
+                    })}
+                  </svg>
+                </div>
                 <div className="text-[9px] tracking-[0.25em] text-neutral-500 uppercase font-mono">
                   *ARC-2026-{orderId}*
                 </div>
@@ -280,22 +308,23 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
         </div>
 
         {/* Clean, Uncongested Actions At The End */}
-        <div className="w-full mt-4 space-y-2 font-mono">
+        <div className="w-full mt-4 space-y-2 font-mono no-print">
           <button
             type="button"
             onClick={handleGoToTracking}
             className="w-full py-3.5 px-4 bg-[#1C1612] hover:bg-[#9A6E3E] text-white text-xs font-bold uppercase tracking-widest transition shadow-lg flex items-center justify-center space-x-2 rounded-xl active:scale-98 cursor-pointer"
           >
-            <span>Track Consignment</span>
-            <span>→</span>
+            <span>{isAlreadyOnTrackPage ? 'Close Receipt Window' : 'Track Consignment'}</span>
+            <span>{isAlreadyOnTrackPage ? '✓' : '→'}</span>
           </button>
           
           <button
             type="button"
             onClick={handleSaveInvoice}
-            className="w-full py-2.5 px-4 bg-white/90 hover:bg-white text-black text-[11px] font-bold uppercase tracking-wider border border-[#E6D3B3] transition rounded-xl cursor-pointer shadow-xs"
+            className="w-full py-2.5 px-4 bg-white/90 hover:bg-white text-black text-[11px] font-bold uppercase tracking-wider border border-[#E6D3B3] transition rounded-xl cursor-pointer shadow-xs flex items-center justify-center space-x-1.5"
           >
-            Save / Print Tax Invoice
+            <span>🖨️</span>
+            <span>Save / Print Tax Invoice (PDF)</span>
           </button>
         </div>
 
