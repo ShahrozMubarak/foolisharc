@@ -65,11 +65,15 @@ const seedProductsIfEmpty = async () => {
 };
 
 // Initialize Database
-connectDB().then((connected) => {
-  if (connected) {
-    seedProductsIfEmpty();
-  }
-});
+connectDB()
+  .then((connected) => {
+    if (connected) {
+      seedProductsIfEmpty();
+    }
+  })
+  .catch((err) => {
+    console.warn("⚠️  [MongoDB] Initial startup connect warning:", err.message);
+  });
 
 // ============================================================================
 // 1. AUTHENTICATION & SECURITY (JWT Token with Expiry)
@@ -763,19 +767,21 @@ app.post('/api/theme', requireAdminAuth, async (req, res) => {
   }
 });
 
-// Serve static client assets in production
-const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
+// Serve static client assets in standalone production (Vercel CDN handles this automatically in serverless)
+if (!process.env.VERCEL) {
+  const distPath = path.join(__dirname, '../dist');
+  app.use(express.static(distPath));
 
-// For non-API routes, fallback to index.html for client-side routing
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) next();
+  // For non-API routes, fallback to index.html for client-side routing
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) next();
+    });
   });
-});
+}
 
 // Start Server (when not running in Vercel serverless environment)
 if (!process.env.VERCEL) {

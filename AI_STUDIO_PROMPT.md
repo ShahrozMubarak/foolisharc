@@ -1,41 +1,30 @@
-# 🏛️ FUNNY ARC — Mobile App Conversion Prompt for Google AI Studio
 
-> **Instructions for Google AI Studio**:
-> 1. In Google AI Studio (https://aistudio.google.com), select **Gemini 1.5 Pro** or **Gemini 2.0 Flash / Pro**.
-> 2. Click the **+** (Upload file) icon and attach `funny-arc-ai-studio.zip` (or `zaytoun-atelier-ai-studio.zip`).
-> 3. Paste the prompt below into the prompt box and click **Run**.
-
----
-
-### PROMPT TO COPY & PASTE INTO GOOGLE AI STUDIO:
 
 ```markdown
 You are an expert mobile software architect and senior mobile engineer.
-I have uploaded the complete codebase for "FUNNY ARC" (an ultra-luxury contemporary couture fashion atelier ecommerce platform).
+I have uploaded the complete codebase for "Zaytoun Atelier" (an ultra-luxury Olive & Camel couture fashion ecommerce platform).
 
 ### Objective:
-Convert this web application into a complete, high-performance, production-ready Mobile Application (choose either React Native with Expo SDK 52+ & NativeWind or Flutter, with React Native / Expo preferred).
+Convert this web application into a complete, high-performance, production-ready Mobile Application (choose either React Native with Expo & NativeWind or Flutter, with React Native / Expo preferred).
 
 ### Key Features to Replicate in the Mobile App:
 1. **Brand & Design Identity**:
-   - Brand Name: "FUNNY ARC"
-   - Palette: Pure White (`#FFFFFF`), Camel/Caramel (`#C19A6B` / `#D4A373` / `#9A6E3E`), Onyx/Charcoal (`#1A1A1A`), Cream/Ivory (`#FAF7F2` / `#FAF6F0`).
-   - Typography: Serif luxury headings (Playfair / Cormorant Garamond style) paired with clean geometric body text (Inter / Outfit / SF Pro).
+   - Palette: white , Camel/Caramel (`#C19A6B` / `#D4A373`), Onyx/Charcoal (`#1A1A1A`), Cream/Ivory (`#FAF7F2`).
+   - Typography: Serif luxury headings (Playfair / Cormorant Garamond style) paired with clean geometric body text (Inter / Outfit).
    - Micro-interactions: Smooth haptics, spring animations, fluid tab navigation, and bottom sheets.
-   - Status Text: Consistently format all order statuses in clean lowercase (`pending`, `approved`, `processing`, `shipped`, `delivered`, `cancelled`).
 
 2. **Core Screens & Navigation**:
    - **Tab Navigator**:
-     - 🏠 **Home**: Hero section, curated collections, animated marquee, featured products.
+     - 🏠 **Home**: Hero section, curated collections,, animated marquee, featured products.
      - 🛍️ **Shop / Catalog**: Dynamic category filtering (All, Men, Women, Knitwear, Outerwear), search with debounced filtering, and sorting.
      - 👗 **Fitting Room / Studio**: Interactive 3D/2D look customizer (translating `formeEngine.js` and `FittingRoom.jsx` to mobile).
-     - 🛒 **Cart & Bag**: Slide-up bottom sheet cart, quantity counters, currency conversion (PKR, USD, EUR), promo codes.
-     - 👤 **Account & Admin**: Profile, order history, tracking, Google Sign-in, and secret Admin Gate passcode/owner access.
+     - 🛒 **Cart & Bag**: Slide-up bottom sheet cart, quantity counters, currency conversion, promo codes.
+     - 👤 **Account & Admin**: Profile, order history, tracking, Google Sign-in, and secret Admin Gate passcode modal.
    - **Stack Screens**:
      - **Product Detail**: Image carousel with pinch-to-zoom, size selector, fabric details modal, "Add to Bag", and haptic feedback.
-     - **Checkout Flow**: Shipping address, payment method selection (COD, JazzCash, EasyPaisa, Bank Proof Upload), order summary, and order confirmation.
-     - **Order Tracking**: Order ID lookup with dynamic stepper progress (order placed -> tailoring -> shipped -> delivered).
-     - **Admin Gate & Dashboard**: Passcode/email-protected access (`src/components/AdminGate.jsx`), managing orders with lowercase status switcher, TCS courier approval, subscribers, and live stats.
+     - **Checkout Flow**: Shipping address, payment method selection, order summary, and order confirmation.
+     - **Order Tracking**: Order ID lookup with dynamic stepper progress (Order Placed -> Tailoring -> Shipped -> Delivered).
+     - **Admin Gate & Dashboard**: Passcode-protected access (`src/components/AdminGate.jsx`), managing orders, subscribers, and stats.
 
 3. **Global State & Services**:
    - Currency Context (dynamic switching across USD, EUR, GBP, PKR, AED, SAR).

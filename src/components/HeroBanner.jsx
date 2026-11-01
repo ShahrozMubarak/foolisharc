@@ -80,7 +80,6 @@ export default function HeroBanner({ onShopNow, onOpenBrandGuide, onOpenFittingR
                 </div>
               </div>
             </div>
-            </div>
           </div>
 
           {/* Right Editorial Lookbook Cards */}
