@@ -4,7 +4,7 @@ import AdminDashboard from '../components/AdminDashboard';
 import AdminGate from '../components/AdminGate';
 import { DEFAULT_OWNER_EMAIL } from '../utils/adminAuth';
 
-export default function StudioPage({
+function StudioPage({
   orders = [],
   onUpdateOrderStatus,
   products = [],
@@ -77,3 +77,4 @@ export default function StudioPage({
     </AdminGate>
   );
 }
+export default StudioPage;
