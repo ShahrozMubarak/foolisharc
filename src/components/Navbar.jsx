@@ -53,7 +53,7 @@ export default function Navbar({
         {/* Brand Logo - Bespoke Luxury Atelier Monogram & Wide-Tracked Wordmark with Live Online Indicator */}
         <div className="flex items-center">
           <BrandLogo size="md" />
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#1dbf73] ml-1.5 shadow-[0_0_8px_#1dbf73] animate-pulse" title="Live & Online" />
+      
         </div>
 
         {/* Bold Center Navigation */}
