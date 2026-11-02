@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminGate from '../components/AdminGate';
@@ -21,6 +21,13 @@ function StudioPage({
 }) {
   const navigate = useNavigate();
 
+  const storedOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
+  const mergedOrders = [...orders, ...storedOrders.filter(so => !orders.some(o => o.id === so.id))];
+
+  const [siteSettings, setSiteSettings] = useState(() =>
+    JSON.parse(localStorage.getItem('foolisharc_site_settings') || '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567"}')
+  );
+
   const handleCloseAdmin = () => {
     navigate('/shop');
   };
@@ -32,7 +39,6 @@ function StudioPage({
     navigate('/shop');
   };
 
-  // Resolve authenticated owner profile
   const activeUser = (() => {
     if (user && user.email) return user;
     try {
@@ -42,8 +48,7 @@ function StudioPage({
         if (parsed?.email) return parsed;
       }
     } catch {}
-    
-    // Fallback for session/passcode authenticated owner
+
     return {
       email: DEFAULT_OWNER_EMAIL,
       name: 'Shahroz Mubarak',
@@ -58,8 +63,51 @@ function StudioPage({
   return (
     <AdminGate user={user} onOpenAuthModal={onOpenAuthModal}>
       <div className="min-h-screen bg-[#FAF9F6] text-[#1A1A1A] antialiased">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Site Settings (Contact & Location)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={siteSettings.location || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Location"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                <input
+                  type="email"
+                  value={siteSettings.email || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Contact Email"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone / WhatsApp</label>
+                <input
+                  type="text"
+                  value={siteSettings.phone || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Phone / WhatsApp"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings))}
+              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors font-medium text-sm"
+            >
+              Save Site Info
+            </button>
+          </div>
+        </div>
         <AdminDashboard
-          orders={orders}
+          orders={mergedOrders}
           onUpdateOrderStatus={onUpdateOrderStatus}
           products={products}
           onAddProduct={onAddProduct}
@@ -77,4 +125,5 @@ function StudioPage({
     </AdminGate>
   );
 }
+
 export default StudioPage;
