@@ -26,7 +26,7 @@ const ADMIN_THEMES = [
     shortName: "Warm Camel & Sand Atelier",
     company: "FOOLISH ARC",
     welcome: "Welcome back, Shahroz",
-    sub: "Live atelier telemetry, bespoke client commissions & global logistics",
+    sub: "Live atelier overview, client orders & store management",
     bgOuter: "#E6DDD0",
     bgCanvas: "#FAF6F0",
     sidebar: "#1C1612",
@@ -767,11 +767,11 @@ FOOLISH ARC Atelier | contact@foolisharc.com
       {/* TOP CONTROLLER BAR (5 ADMIN STYLES SWITCHER + EXIT BUTTON)            */}
       {/* ===================================================================== */}
       <div className="w-full max-w-[1440px] mb-4 bg-[#111113] text-white border border-white/10 px-4 py-3 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Mode Title & Live Indicator */}
+        {/* Left: Live Indicator */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-white">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>STORE TELEMETRY OS</span>
+            <span>LIVE STUDIO</span>
           </div>
           <span className="hidden sm:inline text-xs text-neutral-400 font-medium">|</span>
           <span className="hidden sm:inline text-xs text-neutral-300 font-semibold">{activeTheme.shortName}</span>
@@ -975,17 +975,34 @@ FOOLISH ARC Atelier | contact@foolisharc.com
               </div>
 
               {/* Bottom Actions */}
-              <div className="pt-6 border-t border-white/10 space-y-3">
+              <div className="pt-6 border-t border-white/10 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadAllDataFromMongoDB();
+                    showToast("Refreshing database...");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  disabled={loading}
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-between transition border border-white/10"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className={loading ? "animate-spin" : ""}>↻</span>
+                    <span>{loading ? "Refreshing..." : "Refresh Studio"}</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono">Sync Atlas</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setIsMobileMenuOpen(false);
                     if (onCloseAdmin) onCloseAdmin();
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition"
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#C69F6F] hover:bg-[#b08b5d] text-stone-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md"
                 >
-                  <span>←</span>
-                  <span>Exit to Storefront</span>
+                  <span>✕</span>
+                  <span>Exit Studio</span>
                 </button>
               </div>
             </div>
@@ -1185,12 +1202,12 @@ FOOLISH ARC Atelier | contact@foolisharc.com
             </div>
           </div>
 
-          {/* Bottom Settings Link */}
-          <div className="pt-6 border-t border-white/10">
+          {/* Bottom Settings Link & Studio Controls */}
+          <div className="pt-5 border-t border-white/10 space-y-2">
             <button
               type="button"
               onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-[13px] font-bold ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-[13px] font-bold ${
                 activeTab === 'settings' ? 'text-white bg-white/15' : 'text-neutral-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -1199,6 +1216,32 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span>Settings</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                loadAllDataFromMongoDB();
+                showToast("Refreshing database records...");
+              }}
+              disabled={loading}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition border border-white/10"
+              title="Refresh database records"
+            >
+              <span className="flex items-center gap-2">
+                <span className={loading ? "animate-spin" : ""}>↻</span>
+                <span>{loading ? "Syncing..." : "Refresh Studio"}</span>
+              </span>
+              <span className="text-[10px] text-emerald-400 font-mono">Sync</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onCloseAdmin}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#C69F6F] hover:bg-[#b08b5d] text-stone-950 font-black text-xs uppercase tracking-wider transition shadow-sm"
+            >
+              <span>✕</span>
+              <span>Exit Studio</span>
             </button>
           </div>
         </aside>
@@ -1267,7 +1310,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
           </header>
 
           {/* ================================================================= */}
-          {/* TAB: OVERVIEW & SUMMARY (DEFAULT KPI CARDS + 2 TELEMETRY CHARTS)  */}
+          {/* TAB: OVERVIEW & SUMMARY (DEFAULT KPI CARDS + 2 ANALYTICS CHARTS)  */}
           {/* ================================================================= */}
           {(activeTab === 'overview' || activeTab === 'summary') && (
             <div className="space-y-8">
@@ -1408,7 +1451,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     <div className="flex items-center gap-2.5 text-xs">
                       <button
                         type="button"
-                        onClick={() => showToast("Exporting store telemetry report...")}
+                        onClick={() => showToast("Exporting store report...")}
                         className="px-3.5 py-1.5 rounded-full bg-[#F4F5F7] hover:bg-neutral-200 text-neutral-800 font-bold flex items-center gap-1.5 transition"
                       >
                         <span>Export data</span>

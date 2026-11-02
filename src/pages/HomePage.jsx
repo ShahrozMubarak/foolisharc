@@ -265,13 +265,17 @@ export default function HomePage({
             className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700 ease-out"
           />
 
-          {/* Clean Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent pointer-events-none" />
+          {/* Clickable Image to Collection */}
+          <Link
+            to={bannerSlides[currentSlide]?.ctaLink || "/shop"}
+            className="absolute inset-0 block z-0"
+            aria-label="View Collection"
+          />
 
           {/* Left/Prev Arrow Button */}
           <button
             onClick={handlePrevSlide}
-            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-none bg-black/60 hover:bg-black text-white flex items-center justify-center transition-all z-20 border border-white/20 active:scale-95"
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-none bg-black/40 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 border border-white/20 active:scale-95"
             aria-label="Previous Slide"
           >
             ←
@@ -280,36 +284,11 @@ export default function HomePage({
           {/* Right/Next Arrow Button */}
           <button
             onClick={handleNextSlide}
-            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-none bg-black/60 hover:bg-black text-white flex items-center justify-center transition-all z-20 border border-white/20 active:scale-95"
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-none bg-black/40 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 border border-white/20 active:scale-95"
             aria-label="Next Slide"
           >
             →
           </button>
-
-          {/* Slide Text Content */}
-          <div className="absolute inset-0 p-5 sm:p-14 lg:p-20 flex flex-col justify-end text-white max-w-2xl space-y-2 sm:space-y-3 z-10">
-            <span className="text-xs font-black uppercase tracking-[0.2em] bg-white text-black px-3 py-1 w-max rounded-none">
-              {bannerSlides[currentSlide].tag}
-            </span>
-            <h2 className="text-2xl sm:text-5xl md:text-6xl font-black uppercase tracking-tight text-white font-sans drop-shadow-sm">
-              {bannerSlides[currentSlide].headline}
-            </h2>
-            <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-200">
-              {bannerSlides[currentSlide].subtitle}
-            </p>
-            <div className="pt-2">
-              <Link
-                to={bannerSlides[currentSlide].ctaLink}
-                className="btn-shimmer-sheen btn-tactile group inline-flex items-center gap-2 px-7 py-3 rounded-none bg-white text-black hover:bg-[#E6D3B3] font-bold text-xs uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-              >
-                <span>{bannerSlides[currentSlide].ctaText}</span>
-                <span className="arrow-runway-right text-xs">
-                  <span>→</span>
-                  <span>→</span>
-                </span>
-              </Link>
-            </div>
-          </div>
 
           {/* Pagination Indicators */}
           <div className="absolute bottom-4 inset-x-0 flex items-center justify-center space-x-2 z-20">

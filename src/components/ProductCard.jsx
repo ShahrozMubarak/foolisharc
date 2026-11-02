@@ -38,9 +38,7 @@ export default function ProductCard({
     "/images/catalog/men_barrel_jeans_flat.jpg";
   const hoverImage = product.images?.[1] || primaryImage;
 
-  // Fit & demographic subtitle
-  const fitSubtitle = product.fitLine || 
-    `${String(product.fit || product.style || 'REGULAR FIT').toUpperCase().replace(' FIT', '')} FIT | ${String(product.person || product.gender || 'MEN').toUpperCase()}`;
+
 
   // Denim & garment color swatches
   const swatches = Array.isArray(product.colors) && product.colors.length > 0
@@ -103,17 +101,7 @@ export default function ProductCard({
           />
         )}
 
-        {/* Subtle Badge */}
-        {product.badge && (
-          <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
-            <span className="text-[10px] uppercase tracking-widest font-black bg-[#1C1612] text-white px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5 border-l-2 border-[#C69F6F]">
-              {typeof product.badge === 'string' && ['EXCLUSIVE', 'ATELIER', 'RAW SILK'].some(b => product.badge.toUpperCase().includes(b)) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C69F6F]"></span>
-              )}
-              <span>{typeof product.badge === 'string' ? product.badge : (product.badge?.text || '')}</span>
-            </span>
-          </div>
-        )}
+
 
         {/* Wishlist Button */}
         {onToggleWishlist && (
@@ -177,21 +165,11 @@ export default function ProductCard({
           {product.name}
         </h3>
 
-        {/* 2. Fit & Demographics Subtitle (e.g. BARREL FIT | MEN) */}
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-wider mt-1">
-          {fitSubtitle}
-        </p>
-
-        {/* 3. Price in PKR (Bold with strikethrough if on sale) */}
+        {/* Price in PKR */}
         <div className="mt-2.5 flex items-baseline space-x-2">
           <span className="font-sans text-sm sm:text-base font-black text-black dark:text-white tracking-tight">
             {formatPrice(product.price)}
           </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="font-sans text-xs sm:text-sm text-neutral-400 line-through font-normal">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
         </div>
 
         {/* 4. Color Swatches (Small sharp square boxes, matching Outfitters) */}

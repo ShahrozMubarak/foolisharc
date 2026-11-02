@@ -76,11 +76,6 @@ export default function ProductModal({
                 alt={product.name}
                 className="w-full h-full object-cover object-center transition-opacity duration-300"
               />
-              {product.badge && (
-                <span className="absolute top-3 left-3 bg-[#1C1612] text-white text-[9px] font-mono font-bold tracking-widest uppercase px-2.5 py-1 rounded-lg shadow-sm">
-                  {product.badge}
-                </span>
-              )}
             </div>
 
             {/* Thumbnail Gallery */}
@@ -122,11 +117,6 @@ export default function ProductModal({
                 <span className="font-serif text-2xl font-black text-black dark:text-white">
                   {formatPrice(product.price)}
                 </span>
-                {product.originalPrice && (
-                  <span className="text-xs font-mono text-neutral-400 line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
               </div>
 
               {/* Description */}

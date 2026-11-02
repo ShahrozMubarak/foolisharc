@@ -152,13 +152,7 @@ export default function ProductDetailPage({
                 }`}
               />
 
-              {product.badge && (
-                <div className="absolute top-4 left-4 z-10 pointer-events-none">
-                  <span className="text-[10px] uppercase tracking-widest font-black bg-[#1C1612] text-white px-3 py-1 rounded-lg shadow-sm">
-                    {product.badge}
-                  </span>
-                </div>
-              )}
+
 
               <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px] font-mono px-2.5 py-1 rounded-lg pointer-events-none">
                 {isZoomed ? "Click to reset" : "Click to zoom"}
@@ -186,11 +180,6 @@ export default function ProductDetailPage({
                 <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
                   {formatPrice(product.price)}
                 </span>
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <span className="text-sm font-medium text-neutral-400 line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center space-x-1 text-xs font-mono text-neutral-600 dark:text-neutral-400">
