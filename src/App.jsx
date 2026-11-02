@@ -10,7 +10,7 @@ import ScrollProgressBar from './components/ScrollProgressBar';
 import Preloader from './components/Preloader';
 import MarqueeStrip from './components/MarqueeStrip';
 import Navbar from './components/Navbar';
-imporfunction Footer() { const siteSettings = JSON.parse(localStorage.getItem('foolisharc_site_settings') || '{}'); return (<footer><p>{siteSettings.email || 'concierge@foolisharc.com'}</p><p>{siteSettings.phone || '+92 300 1234567'}</p><p>{siteSettings.location || 'Gulberg III, Lahore'}</p></footer>); }t Footer from './components/Footer';
+import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
