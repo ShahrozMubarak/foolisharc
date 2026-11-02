@@ -122,7 +122,7 @@ export async function setPasswordInDB(credentials) {
  */
 export async function loginWithEmailAndPassword(credentials) {
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${API_BASE}/auth/client-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
@@ -205,6 +205,15 @@ export async function deleteProductFromDB(productId) {
  * ORDERS
  */
 export async function fetchOrdersFromDB() {
+  const localSaved = (() => {
+    try {
+      const saved = localStorage.getItem('zaytoun_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })();
+
   try {
     const res = await fetch(`${API_BASE}/orders`, {
       headers: getAuthHeaders(),
@@ -213,21 +222,30 @@ export async function fetchOrdersFromDB() {
     if (!res.ok) throw new Error(`API returned ${res.status}`);
     const data = await res.json();
     if (Array.isArray(data)) {
+      const mergedMap = new Map();
+      localSaved.forEach(o => {
+        if (o) {
+          const k = String(o._id || o.orderNumber || o.id).toLowerCase();
+          mergedMap.set(k, o);
+        }
+      });
+      data.forEach(o => {
+        if (o) {
+          const k = String(o._id || o.orderNumber || o.id).toLowerCase();
+          mergedMap.set(k, o);
+        }
+      });
+      const combined = Array.from(mergedMap.values());
       try {
-        localStorage.setItem('zaytoun_orders', JSON.stringify(data));
+        localStorage.setItem('zaytoun_orders', JSON.stringify(combined));
       } catch {}
-      return data;
+      return combined;
     }
   } catch (err) {
     console.info('Using local orders (MongoDB sync note):', err.message);
   }
 
-  try {
-    const saved = localStorage.getItem('zaytoun_orders');
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+  return localSaved;
 }
 
 export async function fetchOrderByNumber(orderNumber) {

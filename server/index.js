@@ -317,7 +317,7 @@ app.post('/api/auth/set-password', async (req, res) => {
 /**
  * Client Email + Password Login - Authenticates directly against MongoDB Atlas
  */
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/client-login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -544,14 +544,14 @@ app.post('/api/orders', validateOrder, async (req, res) => {
       return res.status(503).json({ error: 'MongoDB database is connecting or unavailable. Please retry in a few moments.' });
     }
     const orderData = req.body;
-    if (!orderData.customer?.googleVerified) {
-      return res.status(403).json({
-        error: 'Authentication Required: You must be signed in with Google to place an order.'
+    if (!orderData.customer?.email) {
+      return res.status(400).json({
+        error: 'Customer email is required to place an order.'
       });
     }
 
     if (!orderData.orderNumber) {
-      orderData.orderNumber = `ZYT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      orderData.orderNumber = `ARC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     }
     if (!orderData.status) {
       orderData.status = 'pending';

@@ -21,8 +21,24 @@ function StudioPage({
 }) {
   const navigate = useNavigate();
 
-  const storedOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-  const mergedOrders = [...orders, ...storedOrders.filter(so => !orders.some(o => o.id === so.id))];
+  const storedOrders = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
+    } catch {
+      return [];
+    }
+  })();
+
+  const mergedOrders = (() => {
+    const map = new Map();
+    (orders || []).forEach(o => {
+      if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o);
+    });
+    (storedOrders || []).forEach(o => {
+      if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o);
+    });
+    return Array.from(map.values());
+  })();
 
 
   const handleCloseAdmin = () => {

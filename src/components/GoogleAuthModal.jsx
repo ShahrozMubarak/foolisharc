@@ -121,36 +121,13 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           setLoading(false);
           const cleanEmail = (googleUser.email || '').toLowerCase().trim();
           setPendingGoogleUser(googleUser);
-
-          // Check if this user already has credentials configured
-          let hasExistingCredentials = false;
-          try {
-            const stored = JSON.parse(localStorage.getItem('foolisharc_credentials') || '{}');
-            if (stored[cleanEmail]) {
-              hasExistingCredentials = true;
-            }
-          } catch {}
+          setEmail(cleanEmail);
 
           // Synchronize profile with MongoDB Atlas
           syncGoogleClientToDB(googleUser);
 
-          if (hasExistingCredentials) {
-            // Already has password configured -> sign in directly
-            const fullUser = {
-              ...googleUser,
-              email: cleanEmail,
-              authProvider: 'google',
-              googleVerified: true,
-              verified: true
-            };
-            persistUserSession(fullUser);
-            if (onSuccess) onSuccess(fullUser);
-            if (onClose) onClose();
-          } else {
-            // Transition to Step 2: Option to set password for future quick login
-            setEmail(cleanEmail);
-            setStep('set_password');
-          }
+          // Always prompt user with the setup popup to add/confirm email and password
+          setStep('set_password');
         },
         onError: (err) => {
           setLoading(false);
@@ -168,6 +145,11 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setError('');
 
+    const cleanEmail = (email || pendingGoogleUser?.email || '').toLowerCase().trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please provide a valid email address.');
+      return;
+    }
     if (!password) {
       setError('Please enter a password.');
       return;
@@ -182,7 +164,6 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     }
 
     setLoading(true);
-    const cleanEmail = (pendingGoogleUser?.email || email || '').toLowerCase().trim();
 
     try {
       // 1. Save hashed credentials in MongoDB Atlas
@@ -268,10 +249,10 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           ) : (
             <>
               <h2 className="mt-4 text-xl font-black uppercase tracking-tight text-stone-100">
-                Create Your Password
+                Account &amp; Password Setup
               </h2>
               <p className="text-xs text-stone-400 mt-1">
-                Set a password to sign in with your email anytime on your next visit
+                Confirm your email and set up your password to easily sign in next time
               </p>
             </>
           )}
@@ -389,8 +370,23 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
             <form onSubmit={handleSavePasswordAndComplete} className="space-y-4">
               <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1.5 flex justify-between">
+                  <span>Add / Confirm Email</span>
+                  <span className="text-[#C69F6F] lowercase font-normal">account &amp; orders</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
+                  required
+                />
+              </div>
+
+              <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1.5">
-                  Create Password
+                  Set Up Password
                 </label>
                 <input
                   type="password"
@@ -411,7 +407,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter password"
+                  placeholder="Re-enter password to confirm"
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   required
                   minLength={6}
@@ -423,7 +419,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                 disabled={loading}
                 className="w-full py-3 mt-1 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50"
               >
-                {loading ? 'SAVING CREDENTIALS...' : 'SAVE PASSWORD & CONTINUE'}
+                {loading ? 'SAVING CREDENTIALS...' : 'SAVE PASSWORD & COMPLETE SIGN IN'}
               </button>
             </form>
 

@@ -99,7 +99,17 @@ export default function AdminDashboard({
 
   // Live MongoDB States
   const [liveProducts, setLiveProducts] = useState(propProducts);
-  const [liveOrders, setLiveOrders] = useState(propOrders);
+  const [liveOrders, setLiveOrders] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
+      const map = new Map();
+      (propOrders || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+      (stored || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+      return Array.from(map.values());
+    } catch {
+      return propOrders || [];
+    }
+  });
   const [subscribers, setSubscribers] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [inquiries, setInquiries] = useState([]);
@@ -162,7 +172,15 @@ export default function AdminDashboard({
       ]);
 
       if (Array.isArray(dbProds) && dbProds.length > 0) setLiveProducts(dbProds);
-      if (Array.isArray(dbOrders)) setLiveOrders(dbOrders);
+      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+        setLiveOrders(prev => {
+          const map = new Map();
+          (propOrders || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+          (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+          dbOrders.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+          return Array.from(map.values());
+        });
+      }
       if (Array.isArray(dbSubs)) setSubscribers(dbSubs);
       if (Array.isArray(dbCusts)) setCustomers(dbCusts);
       if (Array.isArray(dbInqs)) setInquiries(dbInqs);
@@ -176,6 +194,25 @@ export default function AdminDashboard({
 
   useEffect(() => {
     loadAllDataFromMongoDB();
+  }, []);
+
+  // Real-time synchronization when orders are placed on storefront
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
+        if (Array.isArray(stored) && stored.length > 0) {
+          setLiveOrders(prev => {
+            const map = new Map();
+            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            stored.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            return Array.from(map.values());
+          });
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
   }, []);
 
   useEffect(() => {
@@ -204,6 +241,34 @@ export default function AdminDashboard({
       });
     }
   }, [propOrders]);
+
+  // Proactively refresh orders whenever user switches to or views the Orders tab
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
+        if (Array.isArray(stored) && stored.length > 0) {
+          setLiveOrders(prev => {
+            const map = new Map();
+            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            stored.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            return Array.from(map.values());
+          });
+        }
+      } catch {}
+
+      fetchOrdersFromDB().then(dbOrders => {
+        if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+          setLiveOrders(prev => {
+            const map = new Map();
+            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            dbOrders.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
+            return Array.from(map.values());
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [activeTab]);
 
   // Total Gross Revenue Calculation
   const totalRevenue = useMemo(() => {
@@ -1713,10 +1778,10 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                             </td>
                             <td className="py-3.5 px-3">
                               <div className="font-bold text-neutral-900">
-                                {ord.customer?.firstName} {ord.customer?.lastName}
+                                {ord.customer?.name || `${ord.customer?.firstName || ''} ${ord.customer?.lastName || ''}`.trim() || ord.customer?.email || 'Valued Client'}
                               </div>
                               <div className="text-[11px] text-neutral-500 font-normal">
-                                {ord.customer?.city || 'Pakistan'} | {ord.customer?.phone}
+                                {ord.customer?.city || 'Pakistan'} | {ord.customer?.phone || ord.customer?.email || 'N/A'}
                               </div>
                             </td>
                             <td className="py-3.5 px-3">
