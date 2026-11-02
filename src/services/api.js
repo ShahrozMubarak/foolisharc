@@ -35,7 +35,7 @@ export function getAuthHeaders() {
   }
 
   try {
-    const userStr = localStorage.getItem('zaytoun_client_user');
+    const userStr = localStorage.getItem('zaytoun_client_user') || localStorage.getItem('foolisharc_user') || localStorage.getItem('zaytoun_user');
     if (userStr) {
       const user = JSON.parse(userStr);
       if (user?.email) {

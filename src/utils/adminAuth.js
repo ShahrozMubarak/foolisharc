@@ -46,7 +46,7 @@ export function isOwnerAuthorized(user = null) {
   let activeUser = user;
   if (!activeUser) {
     try {
-      const stored = localStorage.getItem('zaytoun_client_user');
+      const stored = localStorage.getItem('zaytoun_client_user') || localStorage.getItem('foolisharc_user') || localStorage.getItem('zaytoun_user');
       if (stored) {
         activeUser = JSON.parse(stored);
       }

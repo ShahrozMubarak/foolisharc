@@ -27,6 +27,14 @@ function StudioPage({
   const [siteSettings, setSiteSettings] = useState(() =>
     JSON.parse(localStorage.getItem('foolisharc_site_settings') || '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567"}')
   );
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveSiteInfo = () => {
+    localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings));
+    window.dispatchEvent(new Event('storage'));
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
 
   const handleCloseAdmin = () => {
     navigate('/shop');
@@ -98,12 +106,19 @@ function StudioPage({
                 />
               </div>
             </div>
-            <button
-              onClick={() => localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings))}
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors font-medium text-sm"
-            >
-              Save Site Info
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleSaveSiteInfo}
+                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors font-medium text-sm"
+              >
+                Save Site Info
+              </button>
+              {saveSuccess && (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-md animate-fadeIn">
+                  ✓ Saved & synced to footer
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <AdminDashboard

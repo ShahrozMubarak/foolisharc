@@ -53,35 +53,57 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
       saveCredentials(email, password);
     }
 
-    const user = { email, name: email.split('@')[0], authProvider: 'email' };
+    const cleanEmail = email.toLowerCase().trim();
+    const namePart = cleanEmail.split('@')[0];
+    const user = {
+      email: cleanEmail,
+      name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+      firstName: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+      authProvider: 'email',
+      verified: true,
+      googleVerified: true,
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`
+    };
+
+    localStorage.setItem('zaytoun_client_user', JSON.stringify(user));
+    localStorage.setItem('foolisharc_user', JSON.stringify(user));
     localStorage.setItem('zaytoun_user', JSON.stringify(user));
     if (onSuccess) onSuccess(user);
     if (onClose) onClose();
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setError('');
     setLoading(true);
     try {
-      const googleUser = await loginWithGooglePopup();
-      if (googleUser) {
-        const userEmail = googleUser.email || email;
-        if (password && userEmail) {
-          saveCredentials(userEmail, password);
+      loginWithGooglePopup({
+        onSuccess: (googleUser) => {
+          setLoading(false);
+          const userEmail = (googleUser.email || email || '').toLowerCase().trim();
+          if (password && userEmail) {
+            saveCredentials(userEmail, password);
+          }
+          const user = {
+            ...googleUser,
+            email: userEmail || googleUser.email,
+            authProvider: 'google',
+            googleVerified: true,
+            verified: true
+          };
+          localStorage.setItem('zaytoun_client_user', JSON.stringify(user));
+          localStorage.setItem('foolisharc_user', JSON.stringify(user));
+          localStorage.setItem('zaytoun_user', JSON.stringify(user));
+          if (onSuccess) onSuccess(user);
+          if (onClose) onClose();
+        },
+        onError: (err) => {
+          setLoading(false);
+          setError(err?.message || 'Google sign-in failed. Please retry or sign in with email above.');
         }
-        const user = {
-          ...googleUser,
-          email: userEmail || googleUser.email,
-          authProvider: 'google',
-        };
-        localStorage.setItem('zaytoun_user', JSON.stringify(user));
-        if (onSuccess) onSuccess(user);
-        if (onClose) onClose();
-      }
+      });
     } catch (err) {
-      setError(err?.message || 'Google sign-in failed.');
-    } finally {
       setLoading(false);
+      setError(err?.message || 'Google sign-in initialization failed.');
     }
   };
 

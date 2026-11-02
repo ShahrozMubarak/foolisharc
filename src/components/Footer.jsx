@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { isOwnerAuthorized } from '../utils/adminAuth';
@@ -10,11 +10,44 @@ import { isOwnerAuthorized } from '../utils/adminAuth';
 export default function Footer({ onOpenSizeGuide }) {
   const location = useLocation();
 
+  const [siteSettings, setSiteSettings] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem('foolisharc_site_settings') ||
+        '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567"}'
+      );
+    } catch {
+      return {
+        location: "Gulberg III, Lahore",
+        email: "concierge@foolisharc.com",
+        phone: "+92 300 1234567"
+      };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const stored = localStorage.getItem('foolisharc_site_settings');
+        if (stored) {
+          setSiteSettings(JSON.parse(stored));
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   if (location.pathname.startsWith('/studio') || location.pathname.startsWith('/admin')) {
     if (isOwnerAuthorized()) {
       return null;
     }
   }
+
+  const phoneDisplay = siteSettings.phone || '+92 300 1234567';
+  const emailDisplay = siteSettings.email || 'concierge@foolisharc.com';
+  const locationDisplay = siteSettings.location || 'Gulberg III, Lahore';
+  const waCleanPhone = phoneDisplay.replace(/[^0-9]/g, '') || '923001234567';
 
   return (
     <footer className="bg-[#C69F6F] text-[#1C1612] border-t-2 border-[#7A4B26] select-none transition-colors">
@@ -68,7 +101,7 @@ export default function Footer({ onOpenSizeGuide }) {
                 </li>
                 <li>
                   <a
-                    href="https://wa.me/923001234567"
+                    href={`https://wa.me/${waCleanPhone}`}
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-white transition"
@@ -90,17 +123,17 @@ export default function Footer({ onOpenSizeGuide }) {
               </p>
               <ul className="space-y-2.5 text-[#2C1F13] font-bold normal-case tracking-normal text-sm">
                 <li>
-                  <a href="tel:+923001234567" className="hover:text-white transition">
-                    +92 300 1234567
+                  <a href={`tel:${phoneDisplay}`} className="hover:text-white transition">
+                    {phoneDisplay}
                   </a>
                 </li>
                 <li>
-                  <a href="mailto:concierge@foolisharc.com" className="hover:text-white transition">
-                    concierge@foolisharc.com
+                  <a href={`mailto:${emailDisplay}`} className="hover:text-white transition">
+                    {emailDisplay}
                   </a>
                 </li>
                 <li className="text-[#473320] text-xs font-mono font-bold">
-                  Gulberg III, Lahore
+                  {locationDisplay}
                 </li>
               </ul>
             </div>

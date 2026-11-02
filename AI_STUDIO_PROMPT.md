@@ -15,7 +15,7 @@ Convert this web application into a complete, high-performance, production-ready
 
 2. **Core Screens & Navigation**:
    - **Tab Navigator**:
-     - 🏠 **Home**: Hero section, curated collections,, animated marquee, featured products.
+     - 🏠 **Home**: Hero section, curated collections, animated marquee, featured products.
      - 🛍️ **Shop / Catalog**: Dynamic category filtering (All, Men, Women, Knitwear, Outerwear), search with debounced filtering, and sorting.
      - 👗 **Fitting Room / Studio**: Interactive 3D/2D look customizer (translating `formeEngine.js` and `FittingRoom.jsx` to mobile).
      - 🛒 **Cart & Bag**: Slide-up bottom sheet cart, quantity counters, currency conversion, promo codes.

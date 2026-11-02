@@ -295,15 +295,13 @@ export default function App() {
     }
   }, [orders]);
 
-  // Client Google User State - Strictly enforces Google authentication
+  // Client User State - Supports Google authentication and direct email/password login
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('zaytoun_client_user');
+      const saved = localStorage.getItem('zaytoun_client_user') || localStorage.getItem('foolisharc_user') || localStorage.getItem('zaytoun_user');
       const parsed = saved ? JSON.parse(saved) : null;
       if (
         parsed &&
-        parsed.authProvider === 'google' &&
-        parsed.googleVerified === true &&
         parsed.email
       ) {
         return parsed;
@@ -316,10 +314,12 @@ export default function App() {
 
   useEffect(() => {
     try {
-      if (currentUser && currentUser.authProvider === 'google' && currentUser.googleVerified) {
+      if (currentUser && currentUser.email) {
         localStorage.setItem('zaytoun_client_user', JSON.stringify(currentUser));
+        localStorage.setItem('foolisharc_user', JSON.stringify(currentUser));
       } else {
         localStorage.removeItem('zaytoun_client_user');
+        localStorage.removeItem('foolisharc_user');
       }
     } catch (e) {
       console.warn("Client user storage error:", e);
@@ -356,18 +356,20 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
-  // On Google Sign In Success - Strictly accepts verified Google users
-  const handleAuthSuccess = (googleUser) => {
-    if (!googleUser || googleUser.authProvider !== 'google') {
-      console.warn("Blocked non-Google login attempt:", googleUser);
+  // On Sign In Success - Accepts verified Google users or direct credentials
+  const handleAuthSuccess = (authUser) => {
+    if (!authUser || !authUser.email) {
+      console.warn("Blocked invalid login attempt:", authUser);
       return;
     }
 
-    setCurrentUser(googleUser);
+    setCurrentUser(authUser);
     setIsAuthModalOpen(false);
 
-    // Sync client profile to MongoDB Atlas backend
-    API.syncGoogleClientToDB(googleUser);
+    // Sync client profile to MongoDB Atlas backend if available
+    if (API && API.syncGoogleClientToDB) {
+      API.syncGoogleClientToDB(authUser);
+    }
 
     // If an item was queued when clicking "Add to Cart":
     if (authModalConfig.pendingItem) {
@@ -380,19 +382,19 @@ export default function App() {
       );
       setToastNotification({
         title: "Added to Your Bag",
-        message: `Welcome, ${googleUser.firstName || googleUser.name}! "${item.name || 'Garment'}" has been added to your bag.`
+        message: `Welcome, ${authUser.firstName || authUser.name}! "${item.name || 'Garment'}" has been added to your bag.`
       });
       setIsCartOpen(true);
     } else {
       setToastNotification({
-        title: "Signed In with Google",
-        message: `Welcome back to FOOLISH ARC, ${googleUser.firstName || googleUser.name}!`
+        title: authUser.authProvider === 'google' ? "Signed In with Google" : "Signed In",
+        message: `Welcome back to FOOLISH ARC, ${authUser.firstName || authUser.name}!`
       });
     }
 
     setAuthModalConfig({
-      title: "Sign in with Google to Add to Bag",
-      subtitle: "To curate your luxury wardrobe and place orders, please sign in with your Google account.",
+      title: "Sign in to Add to Bag",
+      subtitle: "To curate your luxury wardrobe and place orders, please sign in with your account.",
       pendingItem: null
     });
   };
