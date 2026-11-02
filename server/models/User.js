@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema(
     avatar: { type: String },
     googleId: { type: String },
     authProvider: { type: String, default: 'google' },
+    password: { type: String },
     role: { type: String, default: 'customer' },
     verified: { type: Boolean, default: true },
     loginCount: { type: Number, default: 1 },

@@ -100,6 +100,42 @@ export async function syncGoogleClientToDB(userData) {
 }
 
 /**
+ * 🔐 Set Password for client account in MongoDB Atlas
+ */
+export async function setPasswordInDB(credentials) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/set-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to set password');
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+/**
+ * 🔑 Authenticate client with Email & Password against MongoDB Atlas
+ */
+export async function loginWithEmailAndPassword(credentials) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+/**
  * Check if backend server and MongoDB are connected
  */
 export async function checkServerStatus() {

@@ -18,6 +18,7 @@ import User from './models/User.js';
 import { SEED_PRODUCTS } from './seedData.js';
 import { generateAdminToken, requireAdminAuth, verifyAdminPassword } from './middleware/auth.js';
 import { validateSubscriber, validateInquiry, validateOrder, validateProduct } from './middleware/validation.js';
+import bcrypt from 'bcryptjs';
 import { sendOrderEmails, sendOrderStatusEmail, sendSubscriptionEmails, sendInquiryAlert, sendInquiryEmails } from './services/emailService.js';
 
 dotenv.config();
@@ -217,6 +218,154 @@ app.post('/api/auth/google-client', async (req, res) => {
     });
   } catch (err) {
     console.warn('⚠️ [MongoDB] Error syncing client account:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Client Password Setup - Allows setting email/password credentials after Google sign-in
+ * Hashes password with bcrypt and persists directly into MongoDB Atlas.
+ */
+app.post('/api/auth/set-password', async (req, res) => {
+  try {
+    const { email, password, name, avatar, googleId } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    if (!isDBConnected()) {
+      await connectDB();
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const parts = (name || '').trim().split(' ');
+    const firstName = parts[0] || cleanEmail.split('@')[0];
+    const lastName = parts.slice(1).join(' ') || '';
+    const resolvedAvatar = avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || cleanEmail)}`;
+
+    let savedUser = null;
+    if (isDBConnected()) {
+      savedUser = await User.findOneAndUpdate(
+        { email: cleanEmail },
+        {
+          $setOnInsert: {
+            email: cleanEmail,
+            ordersCount: 0,
+            totalSpent: 0
+          },
+          $set: {
+            name: name || `${firstName} ${lastName}`.trim() || cleanEmail.split('@')[0],
+            firstName,
+            lastName,
+            avatar: resolvedAvatar,
+            googleId: googleId || '',
+            password: hashedPassword,
+            authProvider: googleId ? 'google_password' : 'email',
+            lastLoginAt: new Date(),
+            verified: true
+          },
+          $inc: { loginCount: 1 }
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+
+      await Customer.findOneAndUpdate(
+        { email: cleanEmail },
+        {
+          $setOnInsert: {
+            email: cleanEmail,
+            ordersCount: 0,
+            totalSpent: 0,
+            orderHistory: []
+          },
+          $set: {
+            name: name || `${firstName} ${lastName}`.trim() || cleanEmail.split('@')[0],
+            firstName,
+            lastName,
+            avatar: resolvedAvatar,
+            googleId: googleId || '',
+            authProvider: googleId ? 'google_password' : 'email',
+            lastLoginAt: new Date()
+          },
+          $inc: { loginCount: 1 }
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+      console.log(`🔐 [MongoDB] Password and account credentials saved for: ${cleanEmail}`);
+    }
+
+    res.json({
+      success: true,
+      user: {
+        email: cleanEmail,
+        name: name || cleanEmail.split('@')[0],
+        firstName,
+        lastName,
+        avatar: resolvedAvatar,
+        googleId: googleId || '',
+        authProvider: googleId ? 'google_password' : 'email',
+        syncedToDB: Boolean(savedUser)
+      }
+    });
+  } catch (err) {
+    console.warn('⚠️ [MongoDB] Error setting password:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Client Email + Password Login - Authenticates directly against MongoDB Atlas
+ */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    if (!isDBConnected()) {
+      await connectDB();
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    if (!isDBConnected()) {
+      return res.status(503).json({ error: 'Database service is connecting. Please retry.' });
+    }
+
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (!existingUser) {
+      return res.status(401).json({ error: 'No account found with this email. Please sign in with Google first.' });
+    }
+
+    if (!existingUser.password) {
+      return res.status(401).json({ error: 'This account was created via Google. Please click Continue with Google to log in and set your password.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, existingUser.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Incorrect password. Please verify your credentials and try again.' });
+    }
+
+    existingUser.lastLoginAt = new Date();
+    existingUser.loginCount = (existingUser.loginCount || 0) + 1;
+    await existingUser.save();
+
+    res.json({
+      success: true,
+      user: {
+        email: existingUser.email,
+        name: existingUser.name || existingUser.email.split('@')[0],
+        firstName: existingUser.firstName || existingUser.name?.split(' ')[0] || 'Client',
+        lastName: existingUser.lastName || '',
+        avatar: existingUser.avatar,
+        role: existingUser.role || 'customer',
+        authProvider: existingUser.authProvider || 'email',
+        verified: true
+      }
+    });
+  } catch (err) {
+    console.warn('⚠️ [MongoDB] Login error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

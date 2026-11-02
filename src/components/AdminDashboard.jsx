@@ -69,6 +69,33 @@ export default function AdminDashboard({
   const [timeRange, setTimeRange] = useState('Last 14 Days');
   const [globalSearch, setGlobalSearch] = useState('');
   const [studioToast, setStudioToast] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Studio Site Settings State (Contact & Location)
+  const [siteSettings, setSiteSettings] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem('foolisharc_site_settings') ||
+        '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567","hours":"Mon - Sat: 10:00 AM - 8:00 PM PKT"}'
+      );
+    } catch {
+      return {
+        location: "Gulberg III, Lahore",
+        email: "concierge@foolisharc.com",
+        phone: "+92 300 1234567",
+        hours: "Mon - Sat: 10:00 AM - 8:00 PM PKT"
+      };
+    }
+  });
+  const [siteSettingsSaved, setSiteSettingsSaved] = useState(false);
+
+  const handleSaveSiteSettings = () => {
+    localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings));
+    window.dispatchEvent(new Event('storage'));
+    setSiteSettingsSaved(true);
+    showToast("Site address & contact settings saved and synced!");
+    setTimeout(() => setSiteSettingsSaved(false), 3500);
+  };
 
   // Live MongoDB States
   const [liveProducts, setLiveProducts] = useState(propProducts);
@@ -718,14 +745,193 @@ FOOLISH ARC Atelier | contact@foolisharc.com
       {/* ===================================================================== */}
       <div
         id="admin-frame-shell"
-        className="w-full max-w-[1440px] rounded-[30px] shadow-2xl overflow-hidden flex flex-col lg:flex-row min-h-[860px] border border-black/5 transition-colors duration-500"
+        className="w-full max-w-[1440px] rounded-[30px] shadow-2xl overflow-hidden flex flex-col lg:flex-row min-h-[860px] border border-black/5 transition-colors duration-500 relative"
         style={{ backgroundColor: activeTheme.bgCanvas }}
       >
         {/* =================================================================== */}
-        {/* LEFT VERTICAL SIDEBAR                                               */}
+        {/* MOBILE TOP BAR (Screens < lg) with Hamburger Navigation             */}
+        {/* =================================================================== */}
+        <div
+          className="lg:hidden flex items-center justify-between px-5 py-4 border-b border-black/10 shrink-0"
+          style={{ backgroundColor: activeTheme.sidebar }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl border border-white/20 flex items-center justify-center p-1 bg-white/5 shrink-0">
+              <img src="/images/brand/foolish/arc_emblem.png" alt="Foolish Arc" className="h-full w-auto object-contain" />
+            </div>
+            <div>
+              <span className="font-black text-sm tracking-tight text-white block">
+                FOOLISH ARC
+              </span>
+              <span className="text-[10px] text-[#C69F6F] font-bold uppercase tracking-wider block">
+                Studio • {activeTab.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-2 text-xs font-black transition border border-white/15"
+              aria-label="Open Studio Navigation Menu"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span>MENU</span>
+              {liveOrders.filter(o => (o.status || 'pending').toLowerCase() === 'pending').length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-[#C69F6F] text-black text-[10px] font-black flex items-center justify-center">
+                  {liveOrders.filter(o => (o.status || 'pending').toLowerCase() === 'pending').length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* =================================================================== */}
+        {/* MOBILE SLIDE-OVER NAVIGATION DRAWER                                 */}
+        {/* =================================================================== */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden flex">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Slide-in Menu Panel */}
+            <div
+              className="relative w-4/5 max-w-xs h-full p-6 flex flex-col justify-between text-white shadow-2xl z-10 overflow-y-auto animate-fadeIn"
+              style={{ backgroundColor: activeTheme.sidebar }}
+            >
+              <div className="space-y-6">
+                {/* Header & Close */}
+                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <img src="/images/brand/foolish/arc_emblem.png" alt="Emblem" className="w-7 h-7 object-contain" />
+                    <span className="font-black text-sm tracking-tight">FOOLISH ARC</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Nav Links */}
+                <nav className="space-y-1.5 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'overview' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>📊</span>
+                      <span>Overview</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('orders'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'orders' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>📦</span>
+                      <span className="font-black text-sm">Orders</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#C69F6F] text-black text-xs font-black">
+                      {liveOrders.filter(o => (o.status || 'pending').toLowerCase() === 'pending').length} pending
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('products'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'products' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>🛍️</span>
+                      <span>Products</span>
+                    </span>
+                    <span className="text-xs opacity-75">{liveProducts.length}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('customers'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'customers' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>👥</span>
+                      <span>Customers</span>
+                    </span>
+                    <span className="text-xs opacity-75">{customers.length || liveOrders.length}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('messages'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'messages' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>💬</span>
+                      <span>Messages</span>
+                    </span>
+                    <span className="text-xs opacity-75">{inquiries.length || 0}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition ${
+                      activeTab === 'settings' ? 'bg-[#332820] text-white' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>⚙️</span>
+                      <span>Settings &amp; Contact</span>
+                    </span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="pt-6 border-t border-white/10 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    if (onCloseAdmin) onCloseAdmin();
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <span>←</span>
+                  <span>Exit to Storefront</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* LEFT VERTICAL SIDEBAR (Desktop lg+)                                 */}
         {/* =================================================================== */}
         <aside
-          className="w-full lg:w-[260px] shrink-0 p-6 flex flex-col justify-between text-white transition-colors duration-500"
+          className="hidden lg:flex lg:w-[260px] shrink-0 p-6 flex-col justify-between text-white transition-colors duration-500"
           style={{ backgroundColor: activeTheme.sidebar }}
         >
           <div className="space-y-7">
@@ -935,7 +1141,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
         {/* =================================================================== */}
         {/* MAIN WORKSPACE                                                      */}
         {/* =================================================================== */}
-        <main className="flex-1 p-5 sm:p-8 lg:p-10 space-y-8 overflow-y-auto max-h-[860px]">
+        <main className="flex-1 p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 overflow-y-auto max-h-none lg:max-h-[860px]">
           {/* TOP HEADER */}
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -1699,20 +1905,132 @@ FOOLISH ARC Atelier | contact@foolisharc.com
           {/* TAB: SETTINGS & BRAND PALETTE                                      */}
           {/* ================================================================= */}
           {activeTab === 'settings' && (
-            <div className="space-y-6">
+            <div className="space-y-8 max-w-4xl">
               <div>
-                <h2 className="text-xl font-black tracking-tight" style={{ color: activeTheme.textMain }}>
-                  Atelier Settings &amp; Brand Palette
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: activeTheme.textMain }}>
+                  Atelier &amp; Storefront Settings
                 </h2>
-                <p className="text-xs font-semibold mt-0.5" style={{ color: activeTheme.textMuted }}>
-                  Core brand identity, luxury palette defaults, and administration access.
+                <p className="text-xs sm:text-[13px] font-semibold mt-1" style={{ color: activeTheme.textMuted }}>
+                  Manage physical studio location, public contact info, customer hotline, and brand palette.
                 </p>
               </div>
 
+              {/* 1. Storefront Contact & Address Details */}
               <div
-                className="rounded-[26px] p-6 sm:p-8 shadow-sm border border-black/5 space-y-6 transition-colors duration-500 max-w-2xl"
+                className="rounded-[26px] p-6 sm:p-8 shadow-sm border border-black/5 space-y-6 transition-colors duration-500"
                 style={{ backgroundColor: activeTheme.cardBg }}
               >
+                <div className="flex items-center justify-between pb-4 border-b border-black/5">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900 tracking-tight">
+                      📍 Atelier Location &amp; Contact Details
+                    </h3>
+                    <p className="text-xs text-neutral-500 font-medium mt-0.5">
+                      These values appear live in the site footer, invoices, customer assistance, and WhatsApp concierge.
+                    </p>
+                  </div>
+                  {siteSettingsSaved && (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-xl animate-fadeIn">
+                      ✓ Saved &amp; Live
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
+                      Studio Address / Location
+                    </label>
+                    <input
+                      type="text"
+                      value={siteSettings.location || ''}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, location: e.target.value })}
+                      placeholder="e.g. Gulberg III, Lahore, Pakistan"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
+                    />
+                    <span className="text-[10px] text-neutral-400 font-medium mt-1 block">
+                      Rendered on footer address line &amp; package packing slips
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
+                      Public Concierge Email
+                    </label>
+                    <input
+                      type="email"
+                      value={siteSettings.email || ''}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, email: e.target.value })}
+                      placeholder="e.g. concierge@foolisharc.com"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
+                    />
+                    <span className="text-[10px] text-neutral-400 font-medium mt-1 block">
+                      Client inquiry receiver &amp; order confirmation sender
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
+                      Phone &amp; WhatsApp Concierge
+                    </label>
+                    <input
+                      type="text"
+                      value={siteSettings.phone || ''}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, phone: e.target.value })}
+                      placeholder="e.g. +92 300 1234567"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
+                    />
+                    <span className="text-[10px] text-neutral-400 font-medium mt-1 block">
+                      Powers direct WhatsApp click-to-chat in footer and checkout
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
+                      Concierge Operating Hours
+                    </label>
+                    <input
+                      type="text"
+                      value={siteSettings.hours || 'Mon - Sat: 10:00 AM - 8:00 PM PKT'}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, hours: e.target.value })}
+                      placeholder="e.g. Mon - Sat: 10:00 AM - 8:00 PM PKT"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
+                    />
+                    <span className="text-[10px] text-neutral-400 font-medium mt-1 block">
+                      Display hours for customer inquiries and phone support
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-black/5 flex items-center justify-between">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Changes broadcast immediately to footer and customer views
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveSiteSettings}
+                    className="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition"
+                    style={{ backgroundColor: activeTheme.accent }}
+                  >
+                    Save Contact Info
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Brand Identity & Palette */}
+              <div
+                className="rounded-[26px] p-6 sm:p-8 shadow-sm border border-black/5 space-y-6 transition-colors duration-500"
+                style={{ backgroundColor: activeTheme.cardBg }}
+              >
+                <div className="pb-4 border-b border-black/5">
+                  <h3 className="text-base font-black text-neutral-900 tracking-tight">
+                    🎨 Brand Monogram &amp; Palette
+                  </h3>
+                  <p className="text-xs text-neutral-500 font-medium mt-0.5">
+                    Signature luxury palette codes across slow fashion catalog.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
                     Brand Atelier Name

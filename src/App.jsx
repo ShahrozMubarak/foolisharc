@@ -589,7 +589,7 @@ export default function App() {
 
   // Order Handlers
   const handleConfirmOrder = async (orderData) => {
-    const orderNumber = orderData.orderNumber || orderData.id || `ZYT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderNumber = orderData.orderNumber || orderData.id || `ARC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const newOrder = {
       ...orderData,
       id: orderNumber,
@@ -614,6 +614,7 @@ export default function App() {
       const existing = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
       const filtered = existing.filter(o => o.orderNumber !== orderNumber && o.id !== orderNumber);
       localStorage.setItem('zaytoun_orders', JSON.stringify([newOrder, ...filtered]));
+      window.dispatchEvent(new Event('storage'));
     } catch {}
 
     setOrders(prev => [newOrder, ...prev]);

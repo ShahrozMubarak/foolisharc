@@ -16,7 +16,9 @@ export function getGoogleClientId() {
  * Modern Google Identity Services (GIS) popup login.
  * Avoids full-page redirects and deprecated implicit flow URL hash parameters.
  */
-export function launchGooglePopupLogin({ onSuccess, onError }) {
+export function launchGooglePopupLogin(options = {}) {
+  const normalized = typeof options === 'function' ? { onSuccess: options } : (options || {});
+  const { onSuccess, onError } = normalized;
   const clientId = getGoogleClientId();
 
   if (!clientId) {
