@@ -1,6 +1,8 @@
+import {priceOrder} from '../utils/pricing';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SymbioteButton from './SymbioteButton';
+import { fetchPaymentMethods } from '../services/api';
 
 export default function CheckoutModal({
   isOpen,
@@ -29,12 +31,7 @@ export default function CheckoutModal({
   });
 
   const subtotal = normalizedCartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const activePricing = pricing || {
-    subtotal,
-    discountAmount: 0,
-    shippingFee: subtotal >= 15000 || subtotal === 0 ? 0 : 250,
-    finalTotal: subtotal >= 15000 || subtotal === 0 ? subtotal : subtotal + 250
-  };
+  const activePricing = pricing || priceOrder(subtotal);
 
   // Checkout Steps: 1: 'shipping', 2: 'payment'
   const [step, setStep] = useState('shipping');
@@ -46,8 +43,8 @@ export default function CheckoutModal({
     email: user?.email || "",
     phone: user?.phone ? user.phone.replace(/[^0-9]/g, '').slice(0, 11) : "",
     address: user?.address ? user.address.replace(/[<>{}$~%^*=;`+?]/g, '') : "",
-    city: user?.city ? user.city.replace(/[^a-zA-Z\s]/g, '') : "Lahore",
-    province: user?.province ? user.province.replace(/[^a-zA-Z\s]/g, '') : "Punjab",
+    city: user?.city ? user.city.replace(/[^a-zA-Z\s]/g, '') : "",
+    province: user?.province ? user.province.replace(/[^a-zA-Z\s]/g, '') : "",
     postalCode: user?.postalCode ? user.postalCode.replace(/[^0-9]/g, '').slice(0, 6) : "",
     orderNotes: ""
   }));
@@ -75,16 +72,8 @@ export default function CheckoutModal({
     }
   }, [user]);
 
-  // Selected Payment Method: 'cod' | 'card' | 'jazzcash' | 'easypaisa'
+  // Available payment methods: COD plus owner-configured manual wallets.
   const [paymentMethod, setPaymentMethod] = useState('cod');
-
-  // Credit Card state
-  const [cardData, setCardData] = useState({
-    name: "HUZAIFA KHAN",
-    number: "4242 •••• •••• 4242",
-    expiry: "12/28",
-    cvv: "382"
-  });
 
   // JazzCash state (empty initial values, digits only)
   const [jazzcashPhone, setJazzcashPhone] = useState("");
@@ -94,6 +83,21 @@ export default function CheckoutModal({
   const [easypaisaPhone, setEasypaisaPhone] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState([{ id: 'cod', enabled: true, label: 'Cash on Delivery' }]);
+  const idempotencyRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchPaymentMethods().then(methods => {
+      if (!active) return;
+      setPaymentMethods(methods);
+      if (!methods.some(method => method.id === paymentMethod)) setPaymentMethod('cod');
+    });
+    return () => { active = false; };
+  }, []);
+
+  const paymentMethodConfig = paymentMethods.find(method => method.id === paymentMethod);
 
   const PAKISTANI_CITIES = [
     "Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad", 
@@ -132,14 +136,14 @@ export default function CheckoutModal({
   const processReceiptFile = (file) => {
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setReceiptError("File exceeds 5MB limit. Please upload a smaller compressed image or PDF.");
+    if (file.size > 3 * 1024 * 1024) {
+      setReceiptError("File exceeds 3MB. Please upload a smaller image.");
       return;
     }
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setReceiptError("Invalid file type. Please upload a PNG, JPG, WEBP screenshot or PDF receipt.");
+      setReceiptError("Invalid file type. Please upload a PNG, JPG or WEBP receipt image.");
       return;
     }
 
@@ -172,62 +176,106 @@ export default function CheckoutModal({
   const handleProceedToPayment = (e) => {
     if (e) e.preventDefault();
 
-    // Auto-fill client defaults for empty inputs so patron is never blocked
-    setFormData(prev => ({
-      ...prev,
-      firstName: (prev.firstName || user?.firstName || "Client").trim(),
-      lastName: (prev.lastName || user?.lastName || "Patron").trim(),
-      email: (prev.email || user?.email || "client@foolisharc.com").trim(),
-      phone: (prev.phone || "03001234567").trim(),
-      address: (prev.address || "Main Boulevard, Gulberg III").trim(),
-      city: prev.city || "Lahore"
-    }));
+    const nextErrors = {};
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const email = formData.email.trim();
+    const phone = formData.phone.replace(/\D/g, '');
+    const address = formData.address.trim();
 
-    setFormErrors({});
+    if (!/^[a-zA-Z\s]{1,70}$/.test(firstName)) nextErrors.firstName = 'Enter a valid first name.';
+    if (!/^[a-zA-Z\s]{1,70}$/.test(lastName)) nextErrors.lastName = 'Enter a valid last name.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = 'Enter a valid email address.';
+    if (!/^(?:92)?3\d{9}$|^03\d{9}$/.test(phone)) nextErrors.phone = 'Enter a valid Pakistani mobile number.';
+    if (address.length < 8 || address.length > 300) nextErrors.address = 'Enter a complete delivery address (8–300 characters).';
+
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setSubmitError('');
     setStep('payment');
   };
 
-  const handleFinalizeOrder = () => {
+  const handleFinalizeOrder = async () => {
+    if (isSubmitting) return;
+    setSubmitError('');
+
+    if (!paymentMethodConfig?.enabled) {
+      setSubmitError('Please choose an available payment method.');
+      return;
+    }
+    if (['jazzcash', 'easypaisa'].includes(paymentMethod) && !receiptPreview) {
+      setReceiptError('Upload a payment receipt image to continue.');
+      setSubmitError('A payment receipt is required for this payment method.');
+      return;
+    }
+
+    if (paymentMethod === 'jazzcash' && (!/^03\d{9}$/.test(jazzcashPhone) || !/^[a-zA-Z0-9]{4,30}$/.test(jazzcashCnic))) {
+      setSubmitError('Enter the JazzCash sender mobile number and transaction ID.');
+      return;
+    }
+    if (paymentMethod === 'easypaisa' && !/^03\d{9}$/.test(easypaisaPhone)) {
+      setSubmitError('Enter the EasyPaisa sender mobile number.');
+      return;
+    }
+
+    const cleanCustomer = {
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      city: formData.city.trim(),
+      province: formData.province.trim(),
+      postalCode: formData.postalCode.trim(),
+      orderNotes: formData.orderNotes.trim()
+    };
+    const items = normalizedCartItems.map(item => ({
+      id: item.id,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity
+    }));
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const generatedOrderNumber = `ARC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const verifiedEmail = (user?.email || formData.email || 'client@foolisharc.com').trim();
-      const orderPayload = {
-        orderNumber: generatedOrderNumber,
-        id: generatedOrderNumber,
-        customer: {
-          firstName: formData.firstName || user?.firstName || "Client",
-          lastName: formData.lastName || user?.lastName || "Patron",
-          email: verifiedEmail,
-          phone: formData.phone || "03001234567",
-          address: formData.address || "Main Boulevard, Gulberg III",
-          city: formData.city || "Lahore",
-          orderNotes: formData.orderNotes || "",
-          googleVerified: Boolean(user?.googleVerified),
-          googleId: user?.googleId || ''
-        },
-        paymentMethod: paymentMethod || 'cod',
-        paymentReceipt: receiptPreview || null,
-        receiptFileName: receiptFileName || null,
-        receiptUploadedAt: receiptPreview ? new Date().toISOString() : null,
-        status: 'pending',
-        items: normalizedCartItems && normalizedCartItems.length > 0 ? normalizedCartItems : cart,
-        total: activePricing.finalTotal,
-        pricing: activePricing,
-        createdAt: new Date().toLocaleDateString('en-PK', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      };
-      if (onConfirmOrder) onConfirmOrder(orderPayload);
-      if (onOrderCompleted) onOrderCompleted(orderPayload);
+    try {
+      const signature=JSON.stringify({customer:cleanCustomer,items,paymentMethod,receiptPreview,receiptFileName,jazzcashPhone,jazzcashCnic,easypaisaPhone});
+      const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(signature))),v=>v.toString(16).padStart(2,'0')).join('');
+      let previous=idempotencyRef.current;
+      if (!previous) { try {previous=JSON.parse(sessionStorage.getItem('foolisharc_checkout_attempt'));} catch {} }
+      idempotencyRef.current=previous?.digest===digest ? previous : {digest,key:crypto.randomUUID()};
+      try {sessionStorage.setItem('foolisharc_checkout_attempt',JSON.stringify(idempotencyRef.current));} catch {}
+      if (typeof onConfirmOrder !== 'function') {
+        throw new Error('Checkout is temporarily unavailable. Please contact the store.');
+      }
+
+      const savedOrder = await onConfirmOrder({
+        idempotencyKey: idempotencyRef.current.key,
+        customer: cleanCustomer,
+        paymentMethod,
+        paymentReceipt: receiptPreview || undefined,
+        receiptFileName: receiptFileName || undefined,
+        paymentReference: paymentMethod === 'jazzcash'
+          ? { senderPhone: jazzcashPhone, transactionId: jazzcashCnic }
+          : paymentMethod === 'easypaisa'
+            ? { senderPhone: easypaisaPhone, transactionId: '' }
+            : undefined,
+        items
+      });
+
+      if (!savedOrder?.orderNumber) {
+        throw new Error('The server did not confirm this order. Your bag is still saved.');
+      }
+
+      idempotencyRef.current = null;
+      try {sessionStorage.removeItem('foolisharc_checkout_attempt');} catch {}
+      if (onOrderCompleted) onOrderCompleted(savedOrder);
       if (onClose) onClose();
-      navigate(`/track/${generatedOrderNumber}`);
-    }, 400);
+      navigate(`/track/${encodeURIComponent(savedOrder.orderNumber)}`);
+    } catch (error) {
+      setSubmitError(error?.message || 'We could not place your order. Your bag has been kept safe; please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -420,12 +468,13 @@ export default function CheckoutModal({
                   <label className="block text-[11px] font-black uppercase tracking-[0.16em] text-[#8C6A3E] dark:text-[#E6D3B3] mb-1.5">
                     City *
                   </label>
-                  <select
+                  <select required
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
                     className="w-full rounded-xl bg-[#FAF9F6] dark:bg-[#201A16] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-bold uppercase text-[#1C1612] dark:text-white focus:outline-none focus:border-[#9A6E3E] cursor-pointer shadow-inner"
                   >
+                    <option value="">Select a city</option>
                     {PAKISTANI_CITIES.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
@@ -553,38 +602,7 @@ export default function CheckoutModal({
                   </div>
                 </div>
 
-                {/* 2. Credit / Debit Card */}
-                <div 
-                  onClick={() => setPaymentMethod('card')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 ${
-                    paymentMethod === 'card'
-                      ? 'border-[#9A6E3E] bg-[#FAF6F0] dark:bg-[#251E18] shadow-sm'
-                      : 'border-[#E8E0D5] dark:border-[#332A22] hover:border-[#9A6E3E]/60 bg-white dark:bg-[#1A1613]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    checked={paymentMethod === 'card'}
-                    onChange={() => setPaymentMethod('card')}
-                    className="mt-1 accent-[#9A6E3E] cursor-pointer"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <strong className="text-xs sm:text-sm font-black text-[#1C1612] dark:text-white">Credit / Debit Card</strong>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Instant 5% Off</span>
-                      </div>
-                      <div className="flex items-center space-x-1.5 text-xs font-bold">
-                        <span className="bg-neutral-900 text-white px-2 py-0.5 rounded-md text-[10px]">VISA</span>
-                        <span className="bg-[#9A6E3E] text-white px-2 py-0.5 rounded-md text-[10px]">Mastercard</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. JazzCash */}
-                <div 
+                {paymentMethods.some(method => method.id === 'jazzcash' && method.enabled) && <div 
                   onClick={() => setPaymentMethod('jazzcash')}
                   className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 ${
                     paymentMethod === 'jazzcash'
@@ -609,13 +627,12 @@ export default function CheckoutModal({
                       <span className="text-xs font-bold text-neutral-500">Instant</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 font-medium">
-                      Transfer to JazzCash merchant account and attach payment receipt screenshot for verification.
+                      Transfer using the account details shown below and upload your receipt for manual verification.
                     </p>
                   </div>
-                </div>
+                </div>}
 
-                {/* 4. EasyPaisa */}
-                <div 
+                {paymentMethods.some(method => method.id === 'easypaisa' && method.enabled) && <div 
                   onClick={() => setPaymentMethod('easypaisa')}
                   className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 ${
                     paymentMethod === 'easypaisa'
@@ -640,10 +657,10 @@ export default function CheckoutModal({
                       <span className="text-xs font-bold text-neutral-500">Telenor / All Nets</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 font-medium">
-                      Pay instantly via EasyPaisa app or USSD popup. Attach transaction screenshot below.
+                      Transfer using the account details shown below and upload your receipt for manual verification.
                     </p>
                   </div>
-                </div>
+                </div>}
 
               </div>
 
@@ -663,50 +680,6 @@ export default function CheckoutModal({
                   </div>
                 )}
 
-                {paymentMethod === 'card' && (
-                  <div className="space-y-3.5">
-                    <div className="text-xs font-black uppercase tracking-wider text-[#1C1612] dark:text-white">Card Dossier:</div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">Cardholder Name</label>
-                      <input
-                        type="text"
-                        value={cardData.name}
-                        onChange={(e) => setCardData({ ...cardData, name: e.target.value })}
-                        className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs uppercase font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-[#9A6E3E] shadow-inner"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">Card Number</label>
-                      <input
-                        type="text"
-                        value={cardData.number}
-                        onChange={(e) => setCardData({ ...cardData, number: e.target.value })}
-                        className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-[#9A6E3E] shadow-inner"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">Expiry (MM/YY)</label>
-                        <input
-                          type="text"
-                          value={cardData.expiry}
-                          onChange={(e) => setCardData({ ...cardData, expiry: e.target.value })}
-                          className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-[#9A6E3E] shadow-inner"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 mb-1">CVV (3 Digits)</label>
-                        <input
-                          type="password"
-                          value={cardData.cvv}
-                          onChange={(e) => setCardData({ ...cardData, cvv: e.target.value })}
-                          className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-[#9A6E3E] shadow-inner"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {paymentMethod === 'jazzcash' && (
                   <div className="space-y-3.5 text-xs">
                     <div className="flex items-center justify-between border-b border-red-200 dark:border-red-900/40 pb-2">
@@ -717,11 +690,11 @@ export default function CheckoutModal({
                     <div className="p-3.5 bg-white dark:bg-[#1A1613] border border-red-200 dark:border-red-900/40 rounded-xl space-y-1.5 font-mono text-xs">
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Send Payment To:</span>
-                        <strong className="text-red-700 dark:text-red-400 font-bold">0300-8472910</strong>
+                        <strong className="text-red-700 dark:text-red-400 font-bold">{paymentMethodConfig?.accountNumber}</strong>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Account Title:</span>
-                        <strong className="text-neutral-900 dark:text-white font-bold">ZAYTOUN ATELIER</strong>
+                        <strong className="text-neutral-900 dark:text-white font-bold">{paymentMethodConfig?.accountTitle || 'FOOLISH ARC'}</strong>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Payable Total:</span>
@@ -770,11 +743,11 @@ export default function CheckoutModal({
                     <div className="p-3.5 bg-white dark:bg-[#1A1613] border border-emerald-200 dark:border-emerald-900/40 rounded-xl space-y-1.5 font-mono text-xs">
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Send Payment To:</span>
-                        <strong className="text-emerald-700 dark:text-emerald-400 font-bold">0345-8472910</strong>
+                        <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{paymentMethodConfig?.accountNumber}</strong>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Account Title:</span>
-                        <strong className="text-neutral-900 dark:text-white font-bold">ZAYTOUN ATELIER</strong>
+                        <strong className="text-neutral-900 dark:text-white font-bold">{paymentMethodConfig?.accountTitle || 'FOOLISH ARC'}</strong>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-neutral-500 font-sans">Payable Total:</span>
@@ -820,10 +793,10 @@ export default function CheckoutModal({
                         id="checkout-receipt-input"
                         ref={fileInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/jpg,application/pdf"
+                        accept="image/png,image/jpeg,image/webp"
                         onChange={handleReceiptFileChange}
                         className="hidden"
-                        aria-label="Upload payment screenshot or PDF receipt"
+                        aria-label="Upload payment receipt image"
                       />
 
                       {!receiptPreview ? (
@@ -851,25 +824,19 @@ export default function CheckoutModal({
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <span>Choose Screenshot / Receipt File</span>
+                            <span>Choose Receipt Image</span>
                           </div>
                           <span className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 font-medium pointer-events-none">or drag &amp; drop payment screenshot directly here</span>
-                          <span className="text-[10px] text-neutral-400 mt-0.5 font-mono font-bold pointer-events-none">PNG, JPG, WEBP, PDF (Max 5MB)</span>
+                          <span className="text-[10px] text-neutral-400 mt-0.5 font-mono font-bold pointer-events-none">PNG, JPG, WEBP (Max 3MB)</span>
                         </label>
                       ) : (
                         <div className="p-3.5 bg-[#FAF6F0] dark:bg-[#201A16] border border-[#E8E0D5] dark:border-[#332A22] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            {receiptPreview.startsWith('data:application/pdf') ? (
-                              <div className="w-14 h-16 bg-red-100 rounded-xl border border-red-300 flex flex-col items-center justify-center flex-shrink-0 text-red-700 font-mono font-black text-xs">
-                                PDF
-                              </div>
-                            ) : (
-                              <img
-                                src={receiptPreview}
-                                alt="Receipt Preview"
-                                className="w-14 h-16 rounded-xl object-cover border border-[#E8E0D5] shadow-xs bg-white flex-shrink-0"
-                              />
-                            )}
+                            <img
+                              src={receiptPreview}
+                              alt="Payment receipt preview"
+                              className="w-14 h-16 rounded-xl object-cover border border-[#E8E0D5] shadow-xs bg-white flex-shrink-0"
+                            />
                             <div className="min-w-0 flex-1">
                               <strong className="block text-xs font-black text-neutral-900 dark:text-white truncate font-mono">
                                 {receiptFileName}
@@ -906,6 +873,12 @@ export default function CheckoutModal({
                   </div>
                 )}
               </div>
+
+              {submitError && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+                  {submitError}
+                </div>
+              )}
 
               {/* Navigation buttons */}
               <div className="pt-4 flex justify-between items-center border-t border-[#EFE9DF] dark:border-[#2C241D]">

@@ -1,5 +1,20 @@
 import mongoose from 'mongoose';
 
+const SizeChartRowSchema = new mongoose.Schema(
+  {
+    size: { type: String, required: true },
+    chestMin: { type: Number, required: true },
+    chestMax: { type: Number, required: true },
+    waistMin: { type: Number, required: true },
+    waistMax: { type: Number, required: true },
+    hipMin: { type: Number, default: null },
+    hipMax: { type: Number, default: null },
+    length: { type: Number, required: true },
+    shoulder: { type: Number, required: true }
+  },
+  { _id: false }
+);
+
 const ProductSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
@@ -24,6 +39,12 @@ const ProductSchema = new mongoose.Schema(
     fabric: { type: String, default: '' },
     care: { type: String, default: '' },
     fit: { type: String, default: '' },
+    // Fit Finder fields (Spec #5)
+    sizeChart: { type: [SizeChartRowSchema], default: [] },
+    fitType: { type: String, enum: ['slim', 'regular', 'relaxed'], default: 'regular' },
+    fitAdjustment: { type: Number, enum: [-1, -0.5, 0, 0.5, 1], default: 0 },
+    hasStretch: { type: Boolean, default: false },
+    fitNotes: { type: [String], default: [] },
     asset: { type: Object }
   },
   {

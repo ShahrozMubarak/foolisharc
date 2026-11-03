@@ -1,3 +1,4 @@
+import {useModelViewer} from '../hooks/useModelViewer';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isReducedMotionPreferred } from '../config/animations';
@@ -7,6 +8,7 @@ import { isReducedMotionPreferred } from '../config/animations';
  * dynamic feature callouts with pointer indicator lines, and smooth angle transitions.
  */
 export default function Feature3DSection({ className = "" }) {
+  useModelViewer();
   const [activeStep, setActiveStep] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isManualControl, setIsManualControl] = useState(false);

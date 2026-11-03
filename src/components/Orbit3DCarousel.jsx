@@ -1,3 +1,4 @@
+import {useModelViewer} from '../hooks/useModelViewer';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -91,6 +92,7 @@ export default function Orbit3DCarousel({
   onAddToCart,
   className = ""
 }) {
+  useModelViewer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
   const [modelLoading, setModelLoading] = useState(false);

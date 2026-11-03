@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 
 /**
- * PremiumButton — Zaytoun Atelier Luxury Interaction
+ * PremiumButton — FOOLISH ARC Luxury Interaction
  *
  * Clean, premium button with:
  * - Liquid fill flood animation on hover (wave rises from bottom)

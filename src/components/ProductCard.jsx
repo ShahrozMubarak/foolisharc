@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 
 /**
@@ -51,6 +51,7 @@ export default function ProductCard({
   const handleQuickAdd = (e) => {
     e.stopPropagation();
     if (isAdding) return;
+    if (onQuickView) {onQuickView(product); return;}
     setIsAdding(true);
     if (onAddToCart) {
       onAddToCart(product);
@@ -148,7 +149,7 @@ export default function ProductCard({
                     <path d="M6 7h12l2 14H4L6 7Z" />
                     <path d="M9 8V6a3 3 0 0 1 6 0v2" />
                   </svg>
-                  <span>Add to Bag</span>
+                  <span>{onQuickView ? 'Choose size' : 'Add to Bag'}</span>
                 </>
               )}
             </button>
@@ -162,7 +163,7 @@ export default function ProductCard({
         
         {/* 1. Product Title (Uppercase sans-serif) */}
         <h3 className="font-sans text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide line-clamp-1 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
-          {product.name}
+          <Link to={`/product/${encodeURIComponent(product.id)}`} onClick={e=>e.stopPropagation()}>{product.name}</Link>
         </h3>
 
         {/* Price in PKR */}

@@ -4,7 +4,6 @@ import { useCurrency } from '../context/CurrencyContext';
 import BrandLogo from './BrandLogo';
 import SymbioteButton from './SymbioteButton';
 import PullCordLamp from './PullCordLamp';
-import { isOwnerAuthorized } from '../utils/adminAuth';
 
 /**
  * Navbar - Bold, modern luxury navigation bar.
@@ -19,7 +18,9 @@ export default function Navbar({
   user = null,
   onOpenAuthModal,
   onLogout,
-  onOpenSearch
+  onOpenSearch,
+  fitProfile = null,
+  onOpenFitProfile
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -31,12 +32,8 @@ export default function Navbar({
     setUserMenuOpen(false);
   }, [location.pathname]);
 
-  // On Studio / Admin routes, if the owner is authorized, AdminDashboard renders its own workspace
-  if (location.pathname.startsWith('/studio') || location.pathname.startsWith('/admin')) {
-    if (isOwnerAuthorized(user)) {
-      return null;
-    }
-  }
+  // The Studio manages its own secure shell and sign-in screen.
+  if (location.pathname.startsWith('/studio') || location.pathname.startsWith('/admin')) return null;
 
   // Bold navigation link style with Sand #E6D3B3 active indicator
   const navLinkClass = ({ isActive }) =>
@@ -58,15 +55,11 @@ export default function Navbar({
 
         {/* Bold Center Navigation */}
         <nav className="hidden md:flex items-center space-x-8 lg:space-x-10">
-          <NavLink to="/shop?cat=women" className={navLinkClass}>
-            Women
-          </NavLink>
-          <NavLink to="/shop?cat=men" className={navLinkClass}>
-            Men
-          </NavLink>
-          <NavLink to="/shop" className={navLinkClass}>
-            Collection
-          </NavLink>
+          {[['Women', 'women'], ['Men', 'men'], ['Collection', '']].map(([name, cat]) => {
+            const active = location.pathname === '/shop' && (new URLSearchParams(location.search).get('cat') || '') === cat;
+            return <Link key={name} to={cat ? '/shop?cat=' + cat : '/shop'} aria-current={active ? 'page' : undefined}
+              className={navLinkClass({ isActive: active })}>{name}</Link>;
+          })}
           <NavLink to="/track" className={navLinkClass}>
             Track Order
           </NavLink>
@@ -86,6 +79,21 @@ export default function Navbar({
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+            </button>
+          )}
+
+          {/* Header "My fit profile" Link (Placement #5) */}
+          {onOpenFitProfile && (
+            <button
+              type="button"
+              onClick={onOpenFitProfile}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-[#C69F6F] bg-[#FAF8F5] text-[#141413] hover:bg-[#F2E9DE] transition cursor-pointer"
+              title="View, edit or delete your saved fit profile"
+            >
+              <span>My fit profile</span>
+              {fitProfile && (
+                <span className="w-2 h-2 rounded-full bg-[#9A6E3E]" />
+              )}
             </button>
           )}
 
@@ -169,19 +177,7 @@ export default function Navbar({
                     </svg>
                   </Link>
 
-                  {isOwnerAuthorized(user) && (
-                    <Link
-                      to="/studio"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-onyx-900 transition flex items-center justify-between font-bold"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#C69F6F]"></span>
-                        <span>Admin Studio</span>
-                      </span>
-                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[#FAF6F0] text-[#8C6A3E] font-bold">OWNER</span>
-                    </Link>
-                  )}
+
 
                   <div className="border-t border-neutral-100 dark:border-onyx-800 my-1"></div>
 
@@ -201,6 +197,13 @@ export default function Navbar({
               )}
             </div>
           )}
+
+          <Link
+            to="/studio"
+            className="hidden sm:inline-flex items-center rounded-xl border border-[#D8CEBF] dark:border-[#382F26] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7A4B26] dark:text-[#E6D3B3] hover:border-[#9A6E3E] transition"
+          >
+            Owner Studio
+          </Link>
 
           {/* Shopping Bag Button with Symbiote Tether */}
           <SymbioteButton
@@ -309,6 +312,14 @@ export default function Navbar({
             className="block text-black dark:text-white py-1"
           >
             Track Order
+          </NavLink>
+
+          <NavLink
+            to="/studio"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#7A4B26] dark:text-[#E6D3B3] py-1"
+          >
+            Owner Studio
           </NavLink>
 
           {/* Mobile Currency & Lamp Theme Settings Row */}

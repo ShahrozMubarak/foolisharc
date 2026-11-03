@@ -8,7 +8,7 @@ import { useCurrency } from '../context/CurrencyContext';
  * - Direct centered stage where the thermal invoice slip rolls out
  * - Consistent editorial monospace typography
  * - Completely removed emoji icons, congested hardware panels, and cluttered toolbars
- * - Primary "Track Consignment →" action at the end
+ * - Primary "Track Order →" action at the end
  */
 export default function OrderConfirmationModal({ order, isOpen, onClose }) {
   const navigate = useNavigate();
@@ -19,9 +19,9 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
   const timersRef = useRef([]);
 
   const safeOrder = order || {};
-  const orderId = safeOrder.orderNumber || safeOrder.id || `ARC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-  const trackingNumber = safeOrder.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
-  const trackingUrl = typeof window !== 'undefined' ? `${window.location.origin}/track/${orderId}` : `/track/${orderId}`;
+  const orderId = safeOrder.orderNumber || safeOrder.id || 'Order reference pending';
+  const trackingNumber = safeOrder.trackingNumber || 'Assigned after studio approval';
+  const trackingUrl = typeof window !== 'undefined' ? `${window.location.origin}/track/${encodeURIComponent(orderId)}` : `/track/${encodeURIComponent(orderId)}`;
   const orderItems = Array.isArray(safeOrder.items) ? safeOrder.items : [];
   const rawDate = safeOrder.date || safeOrder.createdAt;
   const parsedDate = rawDate ? new Date(rawDate) : new Date();
@@ -189,7 +189,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                   FOOLISH ARC
                 </div>
                 <div className="text-[10px] text-neutral-500 uppercase tracking-widest font-semibold mt-0.5">
-                  Official Tax Invoice & Consignment Slip
+                  Order Receipt & Summary
                 </div>
                 <div className="text-[10px] text-neutral-500 mt-0.5 font-medium">
                   Ref #{orderId} • {formattedDate} {formattedTime}
@@ -213,12 +213,12 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                 <div className="flex justify-between">
                   <span className="text-neutral-500">SETTLEMENT</span>
                   <span className="font-bold uppercase text-[#9A6E3E]">
-                    {safeOrder.paymentMethod === 'bank_transfer' ? 'BANK TRANSFER' : (safeOrder.paymentMethod || 'COD')}
+                    {String(safeOrder.paymentMethod || 'COD').replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">COURIER</span>
-                  <span className="font-bold text-black">TCS Express</span>
+                  <span className="font-bold text-black">{safeOrder.courier || 'Courier partner'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">TRACKING NO</span>
@@ -230,7 +230,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
               <div className="space-y-2 text-[11px] border-b border-dashed border-black/25 pb-3">
                 {orderItems.length === 0 ? (
                   <div className="flex justify-between font-bold">
-                    <span>Atelier Apparel Selection</span>
+                    <span>Your order</span>
                     <span>Rs. {orderTotal.toLocaleString()}</span>
                   </div>
                 ) : (
@@ -238,18 +238,18 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                     <div key={idx} className="space-y-0.5">
                       <div className="flex justify-between font-bold">
                         <span className="truncate pr-2">{item.name || item.title || 'Garment'}</span>
-                        <span>Rs. {Number((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
+                        <span>Rs. {Number(item.lineTotal ?? ((item.unitPrice ?? item.price ?? 0) * (item.quantity || 1))).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-neutral-500 text-[10px]">
                         <span>Size: {item.selectedSize || item.size || 'M'} • Qty: {item.quantity || 1}</span>
-                        <span>{item.selectedColor || item.colorName || 'Camel'}</span>
+                        <span>{item.selectedColor || item.color || item.colorName || '—'}</span>
                       </div>
                     </div>
                   ))
                 )}
                 <div className="flex justify-between text-neutral-500 text-[10px] pt-1">
-                  <span>Insured Express Delivery</span>
-                  <span className="text-emerald-700 font-bold">FREE</span>
+                  <span>Delivery</span>
+                  <span className="text-neutral-700 font-bold">{Number(safeOrder.shippingFee ?? safeOrder.pricing?.shippingFee ?? 0) === 0 ? "FREE" : `Rs. ${Number(safeOrder.shippingFee ?? safeOrder.pricing?.shippingFee ?? 0).toLocaleString()}`}</span>
                 </div>
               </div>
 
@@ -263,7 +263,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
                 </div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border font-mono font-bold text-[10px] tracking-wider uppercase border-[#C69F6F] text-[#9A6E3E]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#C69F6F]"></span>
-                  <span>{String(safeOrder.status || 'VERIFIED').toUpperCase()}</span>
+                  <span>{String(safeOrder.status || 'PENDING').toUpperCase()}</span>
                 </span>
               </div>
 
@@ -324,7 +324,7 @@ export default function OrderConfirmationModal({ order, isOpen, onClose }) {
             className="w-full py-2.5 px-4 bg-white/90 hover:bg-white text-black text-[11px] font-bold uppercase tracking-wider border border-[#E6D3B3] transition rounded-xl cursor-pointer shadow-xs flex items-center justify-center space-x-1.5"
           >
             <span>🖨️</span>
-            <span>Save / Print Tax Invoice (PDF)</span>
+            <span>Save / Print Order Receipt (PDF)</span>
           </button>
         </div>
 

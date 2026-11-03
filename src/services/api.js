@@ -1,143 +1,228 @@
 /**
- * 🌿 ZAYTOUN ATELIER - CLIENT API SERVICE (JWT AUTHENTICATED)
+ * 🌿 FOOLISH ARC - CLIENT API SERVICE (JWT + CSRF + FIT FINDER)
  * Connects frontend React components to the Express + MongoDB backend.
- * Uses expiring JWT tokens for secure admin operations.
  */
 
 import { PRODUCTS } from '../data/products';
+import { recommendProductSize } from '../engine/fitFinderEngine';
 
 export const API_BASE = '/api';
 
-/**
- * 🔐 JWT TOKEN MANAGEMENT
- */
-export function getAdminToken() {
-  return sessionStorage.getItem('zaytoun_admin_jwt') || '';
-}
-
-export function setAdminToken(token) {
-  if (token) {
-    sessionStorage.setItem('zaytoun_admin_jwt', token);
-  } else {
-    sessionStorage.removeItem('zaytoun_admin_jwt');
+function readBrowserCookie(name) {
+  if (typeof document === 'undefined' || !document.cookie) return '';
+  const match = document.cookie
+    .split(';')
+    .map(c => c.trim())
+    .find(c => c.startsWith(`${name}=`));
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match.slice(name.length + 1));
+  } catch {
+    return '';
   }
 }
 
+/**
+ * 🔐 JWT + CSRF HEADERS
+ */
 export function getAuthHeaders() {
-  const token = getAdminToken();
   const headers = {
     'Content-Type': 'application/json',
-    'x-atelier-secret': 'zaytoun_atelier_master_2026'
+    'X-Requested-With': 'XMLHttpRequest'
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const csrf = readBrowserCookie('foolisharc_csrf');
+  if (csrf) {
+    headers['X-CSRF-Token'] = csrf;
   }
-
-  try {
-    const userStr = localStorage.getItem('zaytoun_client_user') || localStorage.getItem('foolisharc_user') || localStorage.getItem('zaytoun_user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user?.email) {
-        headers['x-admin-email'] = user.email.toLowerCase().trim();
-      }
-    }
-  } catch {}
-
   return headers;
 }
 
-export async function loginAdmin(password, username = 'shahroz') {
+export async function loginAdmin(email, password) {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || 'Owner sign-in failed.');
+  }
+
+  return { success: true, admin: data.admin, expiresIn: data.expiresIn, csrfToken: data.csrfToken };
+}
+
+export async function verifyAdminSession() {
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, username })
+    const response = await fetch(`${API_BASE}/auth/verify`, {
+      credentials: 'include',
+      cache: 'no-store'
     });
-    const data = await res.json();
-    if (res.ok && data.token) {
-      setAdminToken(data.token);
-      sessionStorage.setItem('zaytoun_admin_session', 'authenticated');
-      return { success: true, token: data.token, admin: data.admin };
-    }
-    return { success: false, error: data.error || 'Incorrect username or passcode.' };
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.valid) return { valid: false, admin: null };
+    return { valid: true, admin: data.admin, csrfToken: data.csrfToken };
   } catch {
-    // Fallback if backend server is temporarily uncontactable
-    const localPasscode = import.meta.env.VITE_ADMIN_PASSCODE || 'shahroz';
-    const localUser = 'shahroz';
-    if (password === localPasscode && (!username || username.toLowerCase().trim() === localUser)) {
-      sessionStorage.setItem('zaytoun_admin_session', 'authenticated');
-      return { success: true, fallback: true };
-    }
-    return { success: false, error: 'Incorrect admin username or passcode.' };
+    return { valid: false, admin: null, offline: true };
   }
 }
 
-export function logoutAdmin() {
-  setAdminToken(null);
-  sessionStorage.removeItem('zaytoun_admin_session');
+export async function logoutAdmin() {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    });
+  } catch {}
 }
 
 /**
- * 👤 CLIENT GOOGLE AUTHENTICATION & SYNC
- * Syncs authenticated Google user profile to MongoDB Atlas Customer database
+ * 👤 CUSTOMER PERSISTENT SESSIONS & GOOGLE / EMAIL AUTH
  */
-export async function syncGoogleClientToDB(userData) {
+export async function fetchCustomerSession() {
   try {
-    const res = await fetch(`${API_BASE}/auth/google-client`, {
+    const res = await fetch(`${API_BASE}/auth/customer-session`, {
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.authenticated && data.user) {
+      return data.user;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function logoutCustomerSession() {
+  const response = await fetch(`${API_BASE}/auth/customer-logout`, {
+    method: 'POST', headers: getAuthHeaders(), credentials: 'include'
+  });
+  if (!response.ok) throw new Error('Sign-out failed.');
+}
+
+export async function syncGoogleClientToDB(userData) {
+  if (!userData?.accessToken) {
+    throw new Error('Google verification is required. Please sign in again.');
+  }
+
+  const response = await fetch(`${API_BASE}/auth/google-client`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ accessToken: userData.accessToken })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.user) {
+    throw new Error(data.error || 'Could not verify your Google account.');
+  }
+  return data.user;
+}
+
+export async function setPasswordInDB(credentials) {
+  const response = await fetch(`${API_BASE}/auth/set-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(credentials)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Failed to set password.');
+  return data;
+}
+
+export async function loginWithEmailAndPassword(credentials) {
+  const res = await fetch(`${API_BASE}/auth/client-login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(credentials)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Login failed');
+  return data;
+}
+
+/**
+ * 📏 FIT FINDER API HELPERS
+ */
+export async function recommendFitFromAPI(payload, fallbackProduct = null) {
+  try {
+    const res = await fetch(`${API_BASE}/fit/recommend`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
+      credentials: 'include',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return recommendProductSize(payload, fallbackProduct || PRODUCTS[0]);
+}
+
+export async function saveFitProfileToAPI(profilePayload) {
+  const res = await fetch(`${API_BASE}/fit/profile`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(profilePayload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Could not save fit profile.');
+  return data.profile;
+}
+
+export async function fetchFitProfileFromAPI() {
+  try {
+    const res = await fetch(`${API_BASE}/fit/profile`, {
+      credentials: 'include',
+      cache: 'no-store'
     });
     if (res.ok) {
       const data = await res.json();
-      return data.user || userData;
+      return data.profile || null;
     }
-  } catch (err) {
-    console.warn('Could not sync Google client to MongoDB Atlas:', err.message);
-  }
-  return userData;
+  } catch {}
+  return null;
+}
+
+export async function deleteFitProfileFromAPI() {
+  const response=await fetch(`${API_BASE}/fit/profile`, {method:'DELETE',credentials:'include',headers:getAuthHeaders()});
+  if(!response.ok) throw new Error('Your measurements could not be deleted. Please try again.');
+  return response.json();
+}
+
+export async function submitFitFeedbackToAPI(feedbackPayload) {
+  const res = await fetch(`${API_BASE}/fit/feedback`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(feedbackPayload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Could not submit fit feedback.');
+  return data;
 }
 
 /**
- * 🔐 Set Password for client account in MongoDB Atlas
+ * PAYMENT METHODS & HEALTH
  */
-export async function setPasswordInDB(credentials) {
+export async function fetchPaymentMethods() {
   try {
-    const res = await fetch(`${API_BASE}/auth/set-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to set password');
-    return data;
-  } catch (err) {
-    throw err;
+    const response = await fetch(`${API_BASE}/payment-methods`, { cache: 'no-store' });
+    if (!response.ok) return [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
+    const data = await response.json();
+    return Array.isArray(data.methods)
+      ? data.methods.filter(method => method && method.enabled)
+      : [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
+  } catch {
+    return [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
   }
 }
 
-/**
- * 🔑 Authenticate client with Email & Password against MongoDB Atlas
- */
-export async function loginWithEmailAndPassword(credentials) {
-  try {
-    const res = await fetch(`${API_BASE}/auth/client-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    return data;
-  } catch (err) {
-    throw err;
-  }
-}
-
-/**
- * Check if backend server and MongoDB are connected
- */
 export async function checkServerStatus() {
   try {
     const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(6000) });
@@ -156,14 +241,13 @@ export async function fetchProductsFromDB() {
     const res = await fetch(`${API_BASE}/products`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error('API unavailable');
     const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data;
     }
   } catch (err) {
     console.info('Using local product catalog (MongoDB offline/loading):', err.message);
   }
 
-  // Fallback to localStorage or default seed catalog
   try {
     const saved = localStorage.getItem('zaytoun_products');
     return saved ? JSON.parse(saved) : PRODUCTS;
@@ -173,243 +257,139 @@ export async function fetchProductsFromDB() {
 }
 
 export async function saveProductToDB(product) {
-  try {
-    const res = await fetch(`${API_BASE}/products`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(product)
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('Could not save product to MongoDB (saved locally):', err.message);
-  }
-  return product;
+  const response = await fetch(`${API_BASE}/products`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(product)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Product could not be saved.');
+  return data;
 }
 
 export async function deleteProductFromDB(productId) {
-  try {
-    const res = await fetch(`${API_BASE}/products/${productId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
-    if (res.ok) return true;
-  } catch (err) {
-    console.warn('Could not delete product from MongoDB:', err.message);
-  }
-  return false;
+  const response = await fetch(`${API_BASE}/products/${encodeURIComponent(String(productId))}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: getAuthHeaders()
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Product could not be deleted.');
+  return data;
 }
 
 /**
  * ORDERS
  */
 export async function fetchOrdersFromDB() {
-  const localSaved = (() => {
-    try {
-      const saved = localStorage.getItem('zaytoun_orders');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  })();
-
-  try {
-    const res = await fetch(`${API_BASE}/orders`, {
-      headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!res.ok) throw new Error(`API returned ${res.status}`);
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      const mergedMap = new Map();
-      localSaved.forEach(o => {
-        if (o) {
-          const k = String(o._id || o.orderNumber || o.id).toLowerCase();
-          mergedMap.set(k, o);
-        }
-      });
-      data.forEach(o => {
-        if (o) {
-          const k = String(o._id || o.orderNumber || o.id).toLowerCase();
-          mergedMap.set(k, o);
-        }
-      });
-      const combined = Array.from(mergedMap.values());
-      try {
-        localStorage.setItem('zaytoun_orders', JSON.stringify(combined));
-      } catch {}
-      return combined;
-    }
-  } catch (err) {
-    console.info('Using local orders (MongoDB sync note):', err.message);
-  }
-
-  return localSaved;
+  const response = await fetch(`${API_BASE}/orders`, {
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    signal: AbortSignal.timeout(10000),
+    cache: 'no-store'
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Could not load orders. Please sign in again.');
+  return Array.isArray(data) ? data : [];
 }
 
-export async function fetchOrderByNumber(orderNumber) {
+export async function fetchOrderReceipt(id) {
+  const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(id)}/receipt`, { credentials: 'include', cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.receipt) throw new Error(data.error || 'Could not load this receipt.');
+  return data.receipt;
+}
+
+export async function fetchOrderByNumber(orderNumber, email) {
   if (!orderNumber) return null;
-  const target = String(orderNumber).toLowerCase().trim();
+  const response = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderNumber))}?email=${encodeURIComponent(String(email || ''))}`, {
+    signal: AbortSignal.timeout(8000),
+    cache: 'no-store'
+  });
+  if (response.status === 404) return null;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Order tracking is unavailable.');
+  return data;
+}
 
-  try {
-    const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderNumber))}`, {
-      signal: AbortSignal.timeout(8000)
-    });
-    if (res.ok) return await res.json();
-  } catch {
-    // Fallback to local search
-  }
+export async function cancelOrder(orderNumber, { email, cancelReason, cancelNote }) {
+  const response = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderNumber))}/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ email, cancelReason, cancelNote })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'This order could not be cancelled.');
+  return data;
+}
 
-  try {
-    const saved = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-    if (Array.isArray(saved)) {
-      return saved.find(o => {
-        if (!o || typeof o !== 'object') return false;
-        const num = String(o.orderNumber || '').toLowerCase().trim();
-        const id = String(o.id || '').toLowerCase().trim();
-        const mongoId = String(o._id || '').toLowerCase().trim();
-        return (num && num === target) || (id && id === target) || (mongoId && mongoId === target);
-      }) || null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
+export async function submitOrderReview(orderNumber, review) {
+  const response = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderNumber))}/review`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(review)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Your review could not be saved.');
+  return data;
 }
 
 export async function saveOrderToDB(order) {
-  // Retry up to 3 times in case of Vercel serverless cold-start
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const res = await fetch(`${API_BASE}/orders`, {
+      const response = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(order)
+        headers: getAuthHeaders(),
+        body: JSON.stringify(order),
+        signal: AbortSignal.timeout(20000)
       });
+      const data = await response.json().catch(() => ({}));
 
-      if (res.ok) {
-        const savedDoc = await res.json();
-        console.log('✅ Order saved directly to MongoDB Atlas:', savedDoc.orderNumber);
+      if (response.ok && data.orderNumber) return data;
 
-        // Also append directly to local storage cache so it appears everywhere immediately
-        try {
-          const localOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-          const filtered = localOrders.filter(o => o.orderNumber !== savedDoc.orderNumber && o.id !== savedDoc.orderNumber);
-          localStorage.setItem('zaytoun_orders', JSON.stringify([savedDoc, ...filtered]));
-        } catch {}
-
-        return savedDoc;
-      }
-
-      let errorMsg = `Server returned ${res.status}`;
-      try {
-        const errJson = await res.json();
-        errorMsg = errJson.error || errorMsg;
-      } catch {
-        errorMsg = await res.text();
-      }
-
-      // If 503 (database connecting / cold start), wait and retry
-      if (res.status === 503 && attempt < 3) {
-        console.warn(`[MongoDB] Atlas cold-start connect (attempt ${attempt}/3). Retrying in 900ms...`);
-        await new Promise(r => setTimeout(r, 900));
-        continue;
-      }
-
-      console.warn('⚠️ MongoDB order save rejected:', res.status, errorMsg);
-      return { error: errorMsg, status: res.status };
-    } catch (err) {
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 900));
-        continue;
-      }
-      console.warn('Order saved locally (MongoDB offline):', err.message);
-      return { error: err.message, offline: true };
+      const error = new Error(data.error || `Order save failed (${response.status}).`);
+      error.status = response.status;
+      if (response.status !== 503 || attempt === 3) throw error;
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+      if (error.status && error.status !== 503) throw error;
+      if (attempt === 3) throw error;
     }
+
+    await new Promise(resolve => setTimeout(resolve, attempt * 700));
   }
+
+  throw lastError || new Error('Order could not be saved.');
 }
 
 export async function updateOrderStatusInDB(orderId, status, extraFields = {}) {
-  const cleanId = String(orderId || '').toLowerCase().trim();
-  const normalizedStatus = String(status || 'pending').toLowerCase().trim();
+  if (!orderId) throw new Error('Order ID is required.');
+  const response = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderId))}/status`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ status, ...extraFields })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Could not update order status.');
 
-  // Synchronize immediately to local storage cache so all views update in real-time
-  try {
-    const localOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-    if (Array.isArray(localOrders)) {
-      const updated = localOrders.map(o => {
-        if (!o || typeof o !== 'object') return o;
-        const num = String(o.orderNumber || '').toLowerCase().trim();
-        const id = String(o.id || '').toLowerCase().trim();
-        const mongoId = String(o._id || '').toLowerCase().trim();
-        if ((num && num === cleanId) || (id && id === cleanId) || (mongoId && mongoId === cleanId)) {
-          return { ...o, status: normalizedStatus, ...extraFields };
-        }
-        return o;
-      });
-      localStorage.setItem('zaytoun_orders', JSON.stringify(updated));
-    }
-  } catch (err) {
-    console.warn('Local storage cache update note:', err);
-  }
-
-  if (!orderId) {
-    return { status: normalizedStatus, ...extraFields };
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderId))}/status`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status: normalizedStatus, ...extraFields })
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.warn('Could not update order status in MongoDB:', err.message);
-  }
-  return { status: normalizedStatus, ...extraFields };
+  return data;
 }
 
 export async function approveOrderInDB(orderId) {
-  if (!orderId) {
-    throw new Error('Order ID is required to approve order');
-  }
-  const fallbackTracking = `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
-
-  try {
-    const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderId))}/approve`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
-    if (res.ok) return await res.json();
-    const err = await res.json().catch(() => ({}));
-    console.warn('MongoDB approve response was not ok, falling back to local approval:', err.error);
-    return {
-      success: true,
-      order: {
-        id: String(orderId),
-        orderNumber: String(orderId),
-        status: 'approved',
-        trackingNumber: fallbackTracking,
-        courier: 'TCS Express'
-      },
-      trackingNumber: fallbackTracking
-    };
-  } catch (err) {
-    console.warn('Could not approve order in MongoDB, using local fallback:', err.message);
-    return {
-      success: true,
-      order: {
-        id: String(orderId),
-        orderNumber: String(orderId),
-        status: 'approved',
-        trackingNumber: fallbackTracking,
-        courier: 'TCS Express'
-      },
-      trackingNumber: fallbackTracking
-    };
-  }
+  if (!orderId) throw new Error('Order ID is required.');
+  const response = await fetch(`${API_BASE}/orders/${encodeURIComponent(String(orderId))}/approve`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders()
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.error || 'Could not approve this order.');
+  return data;
 }
 
 /**
@@ -422,9 +402,7 @@ export async function fetchThemeFromDB() {
       const data = await res.json();
       if (data && data.brand) return data;
     }
-  } catch {
-    // Fallback
-  }
+  } catch {}
   try {
     const saved = localStorage.getItem('zaytoun_theme_config');
     return saved ? JSON.parse(saved) : null;
@@ -434,39 +412,34 @@ export async function fetchThemeFromDB() {
 }
 
 export async function saveThemeToDB(themeConfig) {
-  try {
-    const res = await fetch(`${API_BASE}/theme`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(themeConfig)
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.warn('Theme saved locally:', err.message);
-  }
-  return themeConfig;
+  const response = await fetch(`${API_BASE}/theme`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(themeConfig)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Theme could not be saved.');
+  return data;
 }
 
 /**
- * NEWSLETTER SUBSCRIBERS (Stored directly in MongoDB)
+ * NEWSLETTER SUBSCRIBERS & INQUIRIES
  */
 export async function subscribeNewsletter(email, source = 'website') {
   try {
     const cleanEmail = (email || '').trim().toLowerCase();
     const res = await fetch(`${API_BASE}/subscribers`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ email: cleanEmail, source })
     });
     if (res.ok) {
-      const data = await res.json();
-      console.log('✅ Newsletter subscriber saved to MongoDB Atlas:', cleanEmail);
-      return data;
+      return await res.json();
     }
     const errData = await res.json();
     return { success: false, error: errData.error || 'Subscription was rejected' };
   } catch (err) {
-    console.warn('Could not save subscriber to MongoDB:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -474,13 +447,12 @@ export async function subscribeNewsletter(email, source = 'website') {
 export async function fetchSubscribersFromDB() {
   try {
     const res = await fetch(`${API_BASE}/subscribers`, {
+      credentials: 'include',
       headers: getAuthHeaders(),
       signal: AbortSignal.timeout(8000)
     });
     if (res.ok) return await res.json();
-  } catch {
-    // Fallback
-  }
+  } catch {}
   return [];
 }
 
@@ -488,6 +460,7 @@ export async function deleteSubscriberFromDB(id) {
   try {
     const res = await fetch(`${API_BASE}/subscribers/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
       headers: getAuthHeaders()
     });
     return res.ok;
@@ -496,54 +469,42 @@ export async function deleteSubscriberFromDB(id) {
   }
 }
 
-/**
- * CUSTOMERS DIRECTORY (Stored directly in MongoDB)
- */
 export async function fetchCustomersFromDB() {
   try {
     const res = await fetch(`${API_BASE}/customers`, {
+      credentials: 'include',
       headers: getAuthHeaders(),
       signal: AbortSignal.timeout(8000)
     });
     if (res.ok) return await res.json();
-  } catch {
-    // Fallback
-  }
+  } catch {}
   return [];
 }
 
-/**
- * CONCIERGE & CONTACT INQUIRIES (Stored directly in MongoDB)
- */
 export async function submitContactInquiry(inquiryData) {
   try {
     const res = await fetch(`${API_BASE}/inquiries`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(inquiryData)
     });
     if (res.ok) {
-      const data = await res.json();
-      console.log('✅ Contact inquiry saved to MongoDB Atlas:', inquiryData.email);
-      return data;
+      return await res.json();
     }
     const errData = await res.json();
     return { success: false, error: errData.error };
-  } catch (err) {
-    console.warn('Could not save inquiry to MongoDB:', err.message);
-  }
-  return { success: true, fallback: true };
+  } catch {}
+  return { success: false, error: 'Your message could not be saved. Please try again.' };
 }
 
 export async function fetchInquiriesFromDB() {
   try {
     const res = await fetch(`${API_BASE}/inquiries`, {
+      credentials: 'include',
       headers: getAuthHeaders(),
       signal: AbortSignal.timeout(8000)
     });
     if (res.ok) return await res.json();
-  } catch {
-    // Fallback
-  }
+  } catch {}
   return [];
 }

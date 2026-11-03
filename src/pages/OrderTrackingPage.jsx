@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
-import { fetchOrderByNumber, updateOrderStatusInDB } from '../services/api';
+import { fetchOrderByNumber, cancelOrder, submitOrderReview } from '../services/api';
 import OrderConfirmationModal from '../components/OrderConfirmationModal';
 
 export default function OrderTrackingPage() {
@@ -9,7 +9,15 @@ export default function OrderTrackingPage() {
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
 
-  const [searchId, setSearchId] = useState('');
+  const [searchId, setSearchId] = useState(orderId || '');
+  const [searchEmail, setSearchEmail] = useState(() => {
+    try { return sessionStorage.getItem('foolisharc_tracking_email') || ''; } catch { return ''; }
+  });
+  const [lookupEmail, setLookupEmail] = useState(() => {
+    try { return sessionStorage.getItem('foolisharc_tracking_email') || ''; } catch { return ''; }
+  });
+  const [lookupError, setLookupError] = useState('');
+  const [lookupRevision, setLookupRevision] = useState(0);
   const [order, setOrder] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -32,138 +40,69 @@ export default function OrderTrackingPage() {
   const [clientReview, setClientReview] = useState(null);
   const [submittedReviewToast, setSubmittedReviewToast] = useState(false);
 
-  // Load orders from MongoDB or localStorage
+  // Tracking is verified against the email entered at checkout; no browser-only order fallback.
   useEffect(() => {
     if (!orderId) {
       setOrder(null);
       setNotFound(false);
       return;
     }
-
-    let isMounted = true;
-
-    async function loadOrder() {
-      // 1. Try fetching from MongoDB database
-      try {
-        const dbOrder = await fetchOrderByNumber(orderId);
-        if (dbOrder && isMounted) {
-          setOrder(dbOrder);
-          setNotFound(false);
-          return;
-        }
-      } catch (err) {
-        console.warn("DB lookup error:", err);
-      }
-
-      // 2. Check localStorage fallback
-      try {
-        const savedOrders = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-        const cleanOrderId = String(orderId || '').toLowerCase().trim();
-        const found = Array.isArray(savedOrders) ? savedOrders.find(
-          o => {
-            if (!o) return false;
-            const num = String(o.orderNumber || '').toLowerCase().trim();
-            const id = String(o.id || '').toLowerCase().trim();
-            return (num && num === cleanOrderId) || (id && id === cleanOrderId);
-          }
-        ) : null;
-
-        if (found && isMounted) {
-          setOrder(found);
-          setNotFound(false);
-          return;
-        }
-      } catch (e) {
-        console.warn("Local storage lookup error:", e);
-      }
-
-      // 3. Fallback sample demo order if ID begins with ARC- or ZYT-
-      if ((orderId.startsWith('ARC-') || orderId.startsWith('ZYT-')) && isMounted) {
-        setOrder({
-          orderNumber: orderId,
-          id: orderId,
-          customer: {
-            firstName: "Ayesha",
-            lastName: "Malik",
-            phone: "03008472910",
-            address: "18-C Gulberg III",
-            city: "Lahore",
-            province: "Punjab",
-            email: "ayesha.malik@couture.pk"
-          },
-          paymentMethod: "jazzcash",
-          total: 33300,
-          status: "dispatched",
-          courier: "TCS Express",
-          trackingNumber: "TCS-99482104-LHE",
-          createdAt: "2026-10-18T14:30:00Z",
-          items: [
-            {
-              id: "forme-01",
-              name: "The Olive Heritage Double-Breasted Trench",
-              price: 18500,
-              selectedSize: "M",
-              selectedColor: "Olive Green",
-              quantity: 1,
-              image: "/images/campaign_olive_coat.jpg"
-            },
-            {
-              id: "forme-02",
-              name: "Pure Mongolian Camel Cashmere Knit",
-              price: 14200,
-              selectedSize: "M",
-              selectedColor: "Desert Camel",
-              quantity: 1,
-              image: "/images/campaign_camel_knit.jpg"
-            }
-          ]
-        });
-        setNotFound(false);
-      } else {
-        setOrder(null);
-        setNotFound(true);
-      }
+    if (!lookupEmail) {
+      setOrder(null);
+      setNotFound(false);
+      return;
     }
 
-    loadOrder();
+    let active = true;
+    setOrder(null);
+    setNotFound(false);
+    setLookupError('');
 
-    return () => {
-      isMounted = false;
-    };
-  }, [orderId]);
+    fetchOrderByNumber(orderId, lookupEmail)
+      .then(result => {
+        if (!active) return;
+        setOrder(result);
+        setNotFound(!result);
+        if (!result) setLookupError('We could not find an order matching that order number and email.');
+      })
+      .catch(error => {
+        if (!active) return;
+        setOrder(null);
+        setNotFound(true);
+        setLookupError(error?.message || 'Order tracking is temporarily unavailable.');
+      });
 
-  // Sync client review from order or localStorage reviews map
+    return () => { active = false; };
+  }, [orderId, lookupEmail, lookupRevision]);
+
+  // Review details are read from the verified server response only.
   useEffect(() => {
-    if (!order) {
+    if (!order?.review?.reviewedAt && !order?.review?.rating) {
       setClientReview(null);
       return;
     }
-    if (order.review) {
-      setClientReview(order.review);
-      setRating(order.review.rating || 5);
-      setFitRating(order.review.fitRating || 'True to Size');
-      setCraftHighlights(order.review.craftHighlights || ['Flawless Stitching']);
-      setReviewComment(order.review.comment || '');
-      return;
-    }
-    try {
-      const reviewsMap = JSON.parse(localStorage.getItem('zaytoun_client_reviews') || '{}');
-      const orderKey = order.orderNumber || order.id || order._id;
-      if (reviewsMap[orderKey]) {
-        const rev = reviewsMap[orderKey];
-        setClientReview(rev);
-        setRating(rev.rating || 5);
-        setFitRating(rev.fitRating || 'True to Size');
-        setCraftHighlights(rev.craftHighlights || ['Flawless Stitching']);
-        setReviewComment(rev.comment || '');
-      }
-    } catch {}
+    setClientReview(order.review);
+    setRating(order.review.rating || 5);
+    setFitRating(order.review.fitRating || 'True to Size');
+    setCraftHighlights(order.review.craftHighlights || ['Flawless Stitching']);
+    setReviewComment(order.review.comment || '');
   }, [order]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (!searchId.trim()) return;
-    navigate(`/track/${searchId.trim().toUpperCase()}`);
+    const cleanId = searchId.trim().toUpperCase();
+    const cleanEmail = searchEmail.trim().toLowerCase();
+    if (!cleanId || !cleanEmail) {
+      setLookupError('Enter both your order number and the email address used at checkout.');
+      return;
+    }
+    try { sessionStorage.setItem('foolisharc_tracking_email', cleanEmail); } catch {}
+    setLookupEmail(cleanEmail);
+    setSearchId(cleanId);
+    setLookupRevision(value => value + 1);
+    setLookupError('');
+    if (orderId !== cleanId) navigate(`/track/${encodeURIComponent(cleanId)}`);
+    else setOrder(null);
   };
 
   const handleCopyLink = () => {
@@ -174,91 +113,56 @@ export default function OrderTrackingPage() {
     });
   };
 
-  // Cancellation Flow
+  // Customer cancellation is verified by the order reference and checkout email.
   const handleConfirmCancel = async () => {
-    if (!order) return;
+    if (!order || !lookupEmail) return;
     setIsCancelling(true);
-    const orderIdentifier = order.orderNumber || order.id || order._id;
-    const cancelledAt = new Date().toISOString();
-    const cancelData = {
-      cancelReason,
-      cancelNote: cancelNote.trim(),
-      cancelledAt
-    };
-
     try {
-      await updateOrderStatusInDB(orderIdentifier, 'cancelled', cancelData);
-    } catch (err) {
-      console.warn("DB cancellation fallback:", err);
+      const result = await cancelOrder(order.orderNumber || order.id, {
+        email: lookupEmail,
+        cancelReason,
+        cancelNote: cancelNote.trim()
+      });
+      setOrder(result.order);
+      setShowCancelModal(false);
+      setLookupError('');
+    } catch (error) {
+      setLookupError(error?.message || 'This order could not be cancelled.');
+    } finally {
+      setIsCancelling(false);
     }
-
-    // Persist directly to local storage cache
-    try {
-      const saved = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-      const cleanIdent = String(orderIdentifier || '').toLowerCase().trim();
-      const updatedList = Array.isArray(saved) ? saved.map(o => {
-        if (!o) return o;
-        const num = String(o.orderNumber || '').toLowerCase().trim();
-        const id = String(o.id || '').toLowerCase().trim();
-        if ((num && num === cleanIdent) || (id && id === cleanIdent)) {
-          return { ...o, status: 'cancelled', ...cancelData };
-        }
-        return o;
-      }) : [];
-      localStorage.setItem('zaytoun_orders', JSON.stringify(updatedList));
-    } catch {}
-
-    setOrder(prev => ({
-      ...prev,
-      status: 'cancelled',
-      ...cancelData
-    }));
-
-    setIsCancelling(false);
-    setShowCancelModal(false);
   };
 
-  // Post-Delivery Review Submission
+  // Review submissions are accepted only after delivery and server-side order verification.
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!order) return;
+    if (!order || !lookupEmail) return;
     setIsSubmittingReview(true);
+    setLookupError('');
 
-    const orderIdentifier = order.orderNumber || order.id || order._id;
-    const reviewData = {
-      rating,
-      fitRating,
-      craftHighlights,
-      comment: reviewComment.trim(),
-      authorName: `${order.customer?.firstName || 'Atelier'} ${order.customer?.lastName || 'Client'}`.trim(),
-      reviewedAt: new Date().toISOString(),
-      verified: true
-    };
-
-    // Store in localStorage reviews map
     try {
-      const reviewsMap = JSON.parse(localStorage.getItem('zaytoun_client_reviews') || '{}');
-      reviewsMap[orderIdentifier] = reviewData;
-      localStorage.setItem('zaytoun_client_reviews', JSON.stringify(reviewsMap));
-    } catch {}
-
-    // Update order in DB and localStorage
-    try {
-      await updateOrderStatusInDB(orderIdentifier, 'delivered', { review: reviewData });
-    } catch {}
-
-    // Update local state
-    setOrder(prev => ({ ...prev, review: reviewData }));
-    setClientReview(reviewData);
-    setIsSubmittingReview(false);
-    setShowReviewModal(false);
-    setSubmittedReviewToast(true);
-    setTimeout(() => setSubmittedReviewToast(false), 4000);
+      const result = await submitOrderReview(order.orderNumber || order.id, {
+        email: lookupEmail,
+        rating,
+        fitRating,
+        craftHighlights,
+        comment: reviewComment.trim()
+      });
+      setOrder(result.order);
+      setClientReview(result.order.review);
+      setShowReviewModal(false);
+      setSubmittedReviewToast(true);
+      setTimeout(() => setSubmittedReviewToast(false), 4000);
+    } catch (error) {
+      setLookupError(error?.message || 'Your review could not be saved.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   const stages = [
-    { key: 'placed', label: 'Order Placed', desc: 'Proof Attached & Authenticated' },
-    { key: 'verified', label: 'Studio Verified', desc: 'Proof Approved in Studio' },
+    { key: 'placed', label: 'Order Placed', desc: 'Order saved securely' },
+    { key: 'verified', label: 'Studio Approved', desc: 'Order reviewed by the store' },
     { key: 'processing', label: 'Tailoring & QC', desc: 'Hand-inspected in Lahore' },
     { key: 'dispatched', label: 'Dispatched', desc: 'Handed to Courier Rider' },
     { key: 'delivered', label: 'Delivered', desc: 'Signed & Completed' }
@@ -314,9 +218,20 @@ export default function OrderTrackingPage() {
                 type="text"
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
-                placeholder="Enter Consignment or Order ID (e.g. ARC-2026-1042 or TCS-99482104-PK)"
+                placeholder="Enter your order number (e.g. FA-...)"
                 aria-label="Order Tracking ID"
                 className="w-full pl-11 pr-4 py-3.5 bg-[#FAF9F6] dark:bg-[#201A16] border border-[#D8CEBF] dark:border-[#382F26] rounded-xl text-xs sm:text-sm font-mono font-bold uppercase tracking-wider text-[#1C1612] dark:text-white focus:outline-none focus:border-[#7A4B26] focus:ring-2 focus:ring-[#7A4B26]/20 transition shadow-inner"
+              />
+            </div>
+            <div className="relative flex-1">
+              <input
+                type="email"
+                value={searchEmail}
+                onChange={event => setSearchEmail(event.target.value)}
+                placeholder="Email used at checkout"
+                aria-label="Email used at checkout"
+                required
+                className="w-full px-4 py-3.5 bg-[#FAF9F6] dark:bg-[#201A16] border border-[#D8CEBF] dark:border-[#382F26] rounded-xl text-xs sm:text-sm font-medium text-[#1C1612] dark:text-white focus:outline-none focus:border-[#7A4B26] focus:ring-2 focus:ring-[#7A4B26]/20 transition shadow-inner"
               />
             </div>
             <button
@@ -326,6 +241,11 @@ export default function OrderTrackingPage() {
               TRACK ORDER →
             </button>
           </form>
+          {lookupError && (
+            <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+              {lookupError}
+            </p>
+          )}
         </div>
 
         {/* If Order is Found */}
@@ -461,7 +381,7 @@ export default function OrderTrackingPage() {
                       Atelier Drape & Textile Review
                     </h3>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      Delivered via {order.courier || 'TCS Express'}. Share your impressions on the tailoring and fabric.
+                      Delivered via {order.courier || 'Courier partner'}. Share your impressions on the tailoring and fabric.
                     </p>
                   </div>
 
@@ -624,12 +544,12 @@ export default function OrderTrackingPage() {
                         Assigned White-Glove Courier:
                       </span>
                       <strong className="text-[#1C1612] dark:text-white font-bold">
-                        {isPendingApproval ? 'Assigned upon Studio Approval' : (order.courier || 'TCS Express / Leopards')}
+                        {isPendingApproval ? 'Assigned upon Studio Approval' : (order.courier || 'Assigned courier partner')}
                       </strong>
                       <span className="text-neutral-400 ml-2 font-mono text-[11px]">
                         {isPendingApproval
                           ? '(Consignment assigned after approval)'
-                          : `(Consignment #${order.trackingNumber || 'TCS-99482104-PK'})`}
+                          : `(Consignment #${order.trackingNumber || 'Awaiting assignment'})`}
                       </span>
                     </div>
                   </div>
@@ -664,7 +584,9 @@ export default function OrderTrackingPage() {
                     {order.customer?.firstName} {order.customer?.lastName}
                   </div>
                   <div className="font-medium leading-relaxed">{order.customer?.address}</div>
-                  <div className="font-bold text-[#8C6A3E] dark:text-[#E6D3B3]">{order.customer?.city}, {order.customer?.province || 'Punjab'}</div>
+                  <div className="font-bold text-[#8C6A3E] dark:text-[#E6D3B3]">
+                    {order.customer?.city}{order.customer?.province ? `, ${order.customer.province}` : ''}
+                  </div>
                   <div className="font-mono text-neutral-500 font-bold pt-1">
                     Contact: {order.customer?.phone}
                   </div>
@@ -680,12 +602,6 @@ export default function OrderTrackingPage() {
                       {order.paymentMethod ? order.paymentMethod.toUpperCase() : 'Cash on Delivery'}
                     </span>
                   </div>
-                  {order.paymentReceipt && (
-                    <div className="p-3 bg-[#FAF6F0] dark:bg-[#201A16] border border-[#E8E0D5] dark:border-[#332A22] rounded-xl flex items-center justify-between text-xs font-bold">
-                      <span className="font-mono text-[#9A6E3E]">📎 Payment Screenshot on File</span>
-                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100">Verified</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -716,7 +632,7 @@ export default function OrderTrackingPage() {
                         </div>
                       </div>
                       <div className="font-black text-[#1C1612] dark:text-white text-sm">
-                        {formatPrice((item.price || item.product?.price || 0) * (item.quantity || 1))}
+                        {formatPrice(Number(item.lineTotal ?? ((item.unitPrice ?? item.price ?? item.product?.price ?? 0) * (item.quantity || 1))))}
                       </div>
                     </div>
                   ))}
@@ -748,7 +664,7 @@ export default function OrderTrackingPage() {
             <span className="text-4xl block">🔍</span>
             <h2 className="font-editorial text-2xl font-bold">Consignment Not Found</h2>
             <p className="text-xs text-onyx-600 dark:text-linen-400 max-w-md mx-auto">
-              We couldn't locate an order matching ID <strong className="font-mono text-[#7A4B26] dark:text-[#C69F6F]">{orderId}</strong>. Please check your order confirmation SMS or email, or contact our atelier concierge.
+              We couldn't find an order matching this reference and checkout email. Please check both details and try again.
             </p>
             <div className="pt-2">
               <Link
@@ -759,7 +675,15 @@ export default function OrderTrackingPage() {
               </Link>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="bg-white dark:bg-onyx-900 rounded-2xl p-8 text-center shadow-sm border border-linen-300 dark:border-onyx-800 space-y-3">
+            <span className="text-3xl block">📦</span>
+            <h2 className="font-editorial text-xl font-bold">Verify your order</h2>
+            <p className="text-xs text-onyx-600 dark:text-linen-400 max-w-md mx-auto">
+              Enter the order number and the email address used at checkout. We use both details to protect your order information.
+            </p>
+          </div>
+        )}
 
       </div>
 

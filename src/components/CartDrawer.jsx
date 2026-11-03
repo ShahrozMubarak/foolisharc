@@ -1,3 +1,5 @@
+import {priceOrder,FREE_SHIPPING_THRESHOLD} from '../utils/pricing';
+import {recommendProductSize} from '../engine/fitFinderEngine';
 import React, { useState } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import SymbioteButton from './SymbioteButton';
@@ -12,11 +14,10 @@ export default function CartDrawer({
   onProceedToCheckout,
   onCheckout,
   user = null,
-  onOpenAuthModal
+  onOpenAuthModal,
+  fitProfile=null,
+  onSwitchItemSize
 }) {
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState(null);
-  const [promoError, setPromoError] = useState("");
   const [deletingKey, setDeletingKey] = useState(null);
   const { formatPrice } = useCurrency();
 
@@ -24,7 +25,7 @@ export default function CartDrawer({
     const key = `${itemId}-${size}-${color}`;
     setDeletingKey(key);
     setTimeout(() => {
-      if (onRemoveItem) onRemoveItem(itemId, size);
+      if (onRemoveItem) onRemoveItem(itemId, size, color);
       setDeletingKey(null);
     }, 450);
   };
@@ -52,38 +53,9 @@ export default function CartDrawer({
     };
   });
 
-  const FREE_SHIPPING_THRESHOLD = 15000;
-  const STANDARD_SHIPPING_FEE = 250;
-
-  // Subtotal
-  const subtotal = normalizedCartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-  // Promo handling
-  const handleApplyPromo = (e) => {
-    e.preventDefault();
-    const clean = promoCode.trim().toUpperCase();
-    if (clean === "EARTH10" || clean === "FOOLISH10" || clean === "ARC10" || clean === "ZAYTOUN10") {
-      setAppliedPromo({ code: clean, discountPercent: 10 });
-      setPromoError("");
-    } else if (clean === "WELCOME15") {
-      setAppliedPromo({ code: "WELCOME15", discountPercent: 15 });
-      setPromoError("");
-    } else if (clean === "FREESHIP") {
-      setAppliedPromo({ code: "FREESHIP", freeShipping: true });
-      setPromoError("");
-    } else {
-      setPromoError("Invalid code. Try FOOLISH10 or WELCOME15");
-    }
-  };
-
-  const discountAmount = appliedPromo?.discountPercent
-    ? Math.round((subtotal * appliedPromo.discountPercent) / 100)
-    : 0;
-
-  const isShippingFree = subtotal >= FREE_SHIPPING_THRESHOLD || appliedPromo?.freeShipping;
-  const shippingFee = isShippingFree || normalizedCartItems.length === 0 ? 0 : STANDARD_SHIPPING_FEE;
-  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
-
+  const subtotal=normalizedCartItems.reduce((sum,item)=>sum+item.price*item.quantity,0);
+  const {discountAmount,shippingFee,finalTotal}=priceOrder(subtotal);
+  const isShippingFree=subtotal>=FREE_SHIPPING_THRESHOLD;
   const progressToFreeShipping = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
   const remainingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
 
@@ -93,7 +65,6 @@ export default function CartDrawer({
       discountAmount,
       shippingFee,
       finalTotal,
-      appliedPromo
     };
     if (onProceedToCheckout) {
       onProceedToCheckout(payload);
@@ -119,6 +90,7 @@ export default function CartDrawer({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close shopping bag"
             className="p-1.5 rounded-full text-onyx-500 dark:text-linen-400 hover:text-onyx-950 dark:hover:text-linen-50 hover:bg-linen-200 dark:hover:bg-onyx-800 transition"
           >
             ✕
@@ -130,7 +102,7 @@ export default function CartDrawer({
           <div className="flex justify-between items-center mb-1 text-onyx-700 dark:text-linen-300 font-medium">
             <span>
               {isShippingFree ? (
-                <strong className="text-olive-700 dark:text-camel-400 font-bold">🎉 You have unlocked Free Express Shipping!</strong>
+                <strong className="text-olive-700 dark:text-camel-400 font-bold">🎉 You have unlocked Free Standard Delivery!</strong>
               ) : (
                 <span>Add <strong>Rs. {remainingForFree.toLocaleString()}</strong> more for Free Shipping</span>
               )}
@@ -189,6 +161,26 @@ export default function CartDrawer({
                       <span>•</span>
                       <span>COLOR: <strong className="text-black dark:text-white font-bold">{item.color}</strong></span>
                     </div>
+                    {(() => {
+                      const rec = fitProfile ? recommendProductSize(fitProfile, item.product) : null;
+                      if (rec?.recommendedSize && rec.recommendedSize !== item.size && (item.product.stockPerSize?.[rec.recommendedSize] ?? item.product.stock) >= item.quantity) {
+                        return (
+                          <div className="mt-1.5 px-2.5 py-1.5 rounded-xl bg-[#F2E9DE] border border-[#C69F6F] text-[11px] text-[#141413] font-medium flex items-center justify-between gap-2">
+                            <span>You usually fit <strong>{rec.recommendedSize}</strong> in this cut</span>
+                            {onSwitchItemSize && (
+                              <button
+                                type="button"
+                                onClick={() => onSwitchItemSize(item.id, item.size, item.color, rec.recommendedSize)}
+                                className="underline font-bold text-[#9A6E3E] shrink-0"
+                              >
+                                Switch to {rec.recommendedSize}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <div className="text-xs font-black text-[#9A6E3E] mt-1.5 font-mono">
                       {formatPrice(item.price * item.quantity)}
                     </div>
@@ -199,7 +191,7 @@ export default function CartDrawer({
                         <button
                           onClick={() => {
                             if (onUpdateQuantity) {
-                              onUpdateQuantity(item.id, item.size, -1);
+                              onUpdateQuantity(item.id, item.size, item.color, -1);
                             }
                           }}
                           className="px-2.5 py-1 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-onyx-800 font-bold transition"
@@ -213,7 +205,7 @@ export default function CartDrawer({
                         <button
                           onClick={() => {
                             if (onUpdateQuantity) {
-                              onUpdateQuantity(item.id, item.size, 1);
+                              onUpdateQuantity(item.id, item.size, item.color, 1);
                             }
                           }}
                           className="px-2.5 py-1 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-onyx-800 font-bold transition"
@@ -253,42 +245,6 @@ export default function CartDrawer({
         {normalizedCartItems.length > 0 && (
           <div className="p-5 border-t border-neutral-200 dark:border-onyx-800 bg-white dark:bg-onyx-950 space-y-3">
             
-            {/* Promo Code Input */}
-            <form onSubmit={handleApplyPromo} className="flex gap-2">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  placeholder="Enter Voucher Code"
-                  aria-label="Promo code"
-                  className="w-full bg-[#FAF9F6] dark:bg-[#1E1915] border border-[#D8CEBF] dark:border-[#382F26] rounded-xl px-3.5 py-2.5 text-xs font-bold text-black dark:text-white focus:outline-none focus:border-[#9A6E3E] uppercase tracking-wider shadow-inner"
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-[#1C1612] hover:bg-[#9A6E3E] text-white px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition whitespace-nowrap shadow-sm active:scale-95"
-              >
-                APPLY
-              </button>
-            </form>
-
-            {promoError && (
-              <p className="text-[11px] text-red-500 font-bold">{promoError}</p>
-            )}
-
-            {appliedPromo && (
-              <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 px-3.5 py-2 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-bold shadow-2xs">
-                <span>Voucher <strong>{appliedPromo.code}</strong> applied!</span>
-                <button 
-                  onClick={() => setAppliedPromo(null)}
-                  className="text-emerald-700 hover:text-emerald-900 font-black ml-2"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
             {/* Calculations Breakdown Card */}
             <div className="p-4 rounded-2xl bg-[#FAF6F0] dark:bg-[#1E1915] border border-[#E8E0D5] dark:border-[#2C241D] space-y-2 text-xs text-neutral-700 dark:text-neutral-300 shadow-2xs">
               <div className="flex justify-between">
@@ -296,15 +252,8 @@ export default function CartDrawer({
                 <span className="font-mono font-bold text-black dark:text-white">{formatPrice(subtotal)}</span>
               </div>
 
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                  <span>Discount ({appliedPromo?.discountPercent}%)</span>
-                  <span className="font-mono">-{formatPrice(discountAmount)}</span>
-                </div>
-              )}
-
               <div className="flex justify-between">
-                <span className="font-semibold">Express Courier Shipping</span>
+                <span className="font-semibold">Standard Delivery</span>
                 <span className="font-mono">
                   {shippingFee === 0 ? (
                     <strong className="text-emerald-600 dark:text-emerald-400 font-bold">FREE</strong>
@@ -339,7 +288,7 @@ export default function CartDrawer({
             {/* Secure Atelier Checkout Note */}
             <div className="flex items-center justify-center space-x-2 text-[10px] text-neutral-500 font-mono tracking-widest pt-1 uppercase font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-black dark:text-white font-bold">TCS EXPRESS • SECURE DISPATCH</span>
+              <span className="text-black dark:text-white font-bold">TRACKED DISPATCH • SECURE CHECKOUT</span>
             </div>
           </div>
         )}

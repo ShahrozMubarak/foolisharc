@@ -1,3 +1,4 @@
+import {useModelViewer} from '../hooks/useModelViewer';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 /**
@@ -13,6 +14,7 @@ export default function Mannequin3D({
   autoRotateDefault = false,
   className = ""
 }) {
+  useModelViewer();
   const modelViewerRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(autoRotateDefault);

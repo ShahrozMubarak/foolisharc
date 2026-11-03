@@ -3,7 +3,8 @@ import React from 'react';
 export const GENDER_FILTERS = [
   { id: "all", label: "All Items" },
   { id: "men", label: "Men's Collection" },
-  { id: "women", label: "Women's Collection" }
+  { id: "women", label: "Women’s Collection" },
+  { id: "kids", label: "Kids" }
 ];
 
 export const SLOT_FILTERS = [
@@ -11,7 +12,8 @@ export const SLOT_FILTERS = [
   { id: "jeans", label: "Jeans & Denim" },
   { id: "tee", label: "T-Shirts" },
   { id: "shirt", label: "Shirts" },
-  { id: "trouser", label: "Trousers" }
+  { id: "trouser", label: "Trousers" },
+  { id: "outer", label: "Outerwear" }, { id:"dress",label:"Dresses" }, { id:"knit",label:"Knitwear" }, { id:"shorts",label:"Shorts" }
 ];
 
 export default function CategoryFilter({
@@ -30,7 +32,7 @@ export default function CategoryFilter({
           return (
             <button
               key={g.id}
-              onClick={() => onSelectGender(g.id)}
+              aria-pressed={isActive} onClick={() => onSelectGender(g.id)}
               className={`px-5 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
                 isActive
                   ? 'bg-[#1C1612] text-white shadow-sm'
@@ -50,7 +52,7 @@ export default function CategoryFilter({
           return (
             <button
               key={s.id}
-              onClick={() => onSelectSlot(s.id)}
+              aria-pressed={isActive} onClick={() => onSelectSlot(s.id)}
               className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase transition cursor-pointer whitespace-nowrap ${
                 isActive
                   ? 'bg-[#9A6E3E] text-white shadow-sm'

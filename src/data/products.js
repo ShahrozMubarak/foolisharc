@@ -1,6 +1,309 @@
-export const CATALOG_VERSION = "2026.10.outfitters_v4_purged";
+export const CATALOG_VERSION = "2026.11.atelier";
 
 const RAW_PRODUCTS = [
+  // =========================================================================
+  // FORME SIGNATURE ATELIER COLLECTION (2D/3D FITTING ROOM & CORE CAPSULE)
+  // =========================================================================
+  {
+    id: "forme-01",
+    name: "Heritage Trench Coat",
+    slug: "heritage-trench-coat",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "outer",
+    style: "coat",
+    collection: "Atelier Core",
+    price: 18500,
+    originalPrice: 21500,
+    badge: "SIGNATURE",
+    rating: 5.0,
+    reviewCount: 64,
+    fitLine: "RELAXED FIT | WOMEN",
+    primaryColor: "Olive Green",
+    colors: [
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" },
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 5, S: 12, M: 18, L: 10, XL: 4 },
+    images: ["/images/heritage_trench_coat.jpg"],
+    description: "Architectural longline trench coat tailored from water-repellent organic cotton gabardine with storm flaps and belted waist.",
+    fabric: "100% Organic Cotton Gabardine",
+    care: "Dry clean only.",
+    fit: "Relaxed tailored overcoat designed to layer over knitwear."
+  },
+  {
+    id: "forme-02",
+    name: "Pure Mongolian Camel Cashmere Knit",
+    slug: "pure-mongolian-camel-cashmere-knit",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "top",
+    style: "knit",
+    collection: "Atelier Core",
+    price: 14200,
+    originalPrice: 16500,
+    badge: "BESTSELLER",
+    rating: 5.0,
+    reviewCount: 88,
+    fitLine: "REGULAR FIT | WOMEN",
+    primaryColor: "Desert Camel",
+    colors: [
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Linen White", hex: "#FAF8F5", bgClass: "bg-[#FAF8F5]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 8, S: 16, M: 22, L: 14, XL: 6 },
+    images: ["/images/camel_cashmere_knit.jpg"],
+    description: "Soft ribbing, an easy crew neckline, and breathable warmth spun from sustainably combed Mongolian camel and cashmere fibers.",
+    fabric: "70% Mongolian Camel Hair, 30% Grade-A Cashmere",
+    care: "Hand wash cold or dry clean. Dry flat.",
+    fit: "True to size with natural rib elasticity."
+  },
+  {
+    id: "forme-03",
+    name: "Camel Pleated Wide-Leg Palazzo Trouser",
+    slug: "camel-pleated-wide-leg-palazzo-trouser",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "bottom",
+    style: "wide",
+    collection: "Atelier Core",
+    price: 11500,
+    originalPrice: 13500,
+    badge: "CORE EDIT",
+    rating: 4.9,
+    reviewCount: 71,
+    fitLine: "WIDE LEG | WOMEN",
+    primaryColor: "Desert Camel",
+    colors: [
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 7, S: 15, M: 20, L: 12, XL: 5 },
+    images: ["/images/women_camel_palazzo.jpg"],
+    description: "High-waisted double-pleated palazzo trousers with a fluid wide leg for unhurried days and elevated evening drape.",
+    fabric: "100% Virgin Wool Gabardine",
+    care: "Dry clean or steam refresh.",
+    fit: "High-rise tailored waist with relaxed wide leg."
+  },
+  {
+    id: "forme-04",
+    name: "Silk Minimalist Midi Column Dress",
+    slug: "silk-minimalist-midi-column-dress",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "dress",
+    style: "dress",
+    collection: "Atelier Core",
+    price: 15900,
+    originalPrice: 18200,
+    badge: "LIMITED",
+    rating: 5.0,
+    reviewCount: 45,
+    fitLine: "REGULAR FIT | WOMEN",
+    primaryColor: "Obsidian Black",
+    colors: [
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" },
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 6, S: 12, M: 16, L: 9, XL: 4 },
+    images: ["/images/couture_silk_dress.jpg"],
+    description: "An effortless bias-cut midi column silhouette with understated seam work, ready for wherever the day goes.",
+    fabric: "100% Heavy Mulberry Silk Crepe",
+    care: "Delicate dry clean.",
+    fit: "Skims the frame without clinging."
+  },
+  {
+    id: "forme-05",
+    name: "Atelier Studio Silk-Cotton Shirt",
+    slug: "atelier-studio-silk-cotton-shirt",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "top",
+    style: "shirt",
+    collection: "Atelier Core",
+    price: 12800,
+    originalPrice: 14500,
+    badge: "ESSENTIAL",
+    rating: 4.9,
+    reviewCount: 53,
+    fitLine: "RELAXED FIT | WOMEN",
+    primaryColor: "Linen White",
+    colors: [
+      { name: "Linen White", hex: "#FAF8F5", bgClass: "bg-[#FAF8F5]" },
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 8, S: 14, M: 19, L: 11, XL: 5 },
+    images: ["/images/women_olive_silk_shirt.jpg"],
+    description: "A clean button-up tailored from silk-cotton voile with concealed placket and mother-of-pearl buttons.",
+    fabric: "75% Organic Cotton, 25% Mulberry Silk",
+    care: "Cold hand wash or dry clean.",
+    fit: "Relaxed architectural drape."
+  },
+  {
+    id: "forme-06",
+    name: "The Modern Tailored Blazer",
+    slug: "the-modern-tailored-blazer",
+    person: "women",
+    gender: "women",
+    category: "Women's Pret",
+    slot: "outer",
+    style: "blazer",
+    collection: "Atelier Core",
+    price: 16800,
+    originalPrice: 19500,
+    badge: "TAILORED",
+    rating: 5.0,
+    reviewCount: 38,
+    fitLine: "REGULAR FIT | WOMEN",
+    primaryColor: "Desert Camel",
+    colors: [
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 5, S: 10, M: 14, L: 8, XL: 3 },
+    images: ["/images/women_onyx_blazer.jpg"],
+    description: "A considered finishing layer with soft canvas shoulders, horn buttons, and an easy single-breasted silhouette.",
+    fabric: "100% Merino Suiting Wool",
+    care: "Dry clean only.",
+    fit: "Structured shoulder with room through the waist."
+  },
+  {
+    id: "forme-07",
+    name: "The Essential Atelier Overshirt",
+    slug: "the-essential-atelier-overshirt",
+    person: "men",
+    gender: "men",
+    category: "Men's Collection",
+    slot: "top",
+    style: "shirt",
+    collection: "Atelier Core",
+    price: 11900,
+    originalPrice: 13800,
+    badge: "CORE EDIT",
+    rating: 4.9,
+    reviewCount: 62,
+    fitLine: "REGULAR FIT | MEN",
+    primaryColor: "Desert Camel",
+    colors: [
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" },
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    stockPerSize: { XS: 6, S: 14, M: 20, L: 15, XL: 6 },
+    images: ["/images/men_linen_shirt.jpg"],
+    description: "A clean spread collar and relaxed everyday shape crafted from brushed cotton-wool twill.",
+    fabric: "80% Organic Cotton, 20% Merino Wool",
+    care: "Machine wash cold gentle.",
+    fit: "Regular fit with clean layering ease."
+  },
+  {
+    id: "forme-08",
+    name: "The Daily Tailored Trouser",
+    slug: "the-daily-tailored-trouser",
+    person: "men",
+    gender: "men",
+    category: "Men's Collection",
+    slot: "bottom",
+    style: "trouser",
+    collection: "Atelier Core",
+    price: 12400,
+    originalPrice: 14200,
+    badge: "TAILORED",
+    rating: 4.9,
+    reviewCount: 49,
+    fitLine: "REGULAR FIT | MEN",
+    primaryColor: "Obsidian Black",
+    colors: [
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" },
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" }
+    ],
+    sizes: ["XS", "S", "M", "L", "XL", "28", "30", "32", "34", "36"],
+    stockPerSize: { XS: 5, S: 12, M: 18, L: 14, XL: 6, "28": 5, "30": 12, "32": 18, "34": 14, "36": 6 },
+    images: ["/images/men_camel_trouser.jpg"],
+    description: "A straight leg trouser with a considered, easy finish and crisp front crease.",
+    fabric: "100% Combed Cavalry Twill",
+    care: "Machine wash cold or dry clean.",
+    fit: "Mid-rise straight tailored leg."
+  },
+  {
+    id: "forme-13",
+    name: "Junior Everyday Organic Tee",
+    slug: "junior-everyday-organic-tee",
+    person: "kids",
+    gender: "kids",
+    category: "Kids' Edit",
+    slot: "top",
+    style: "tee",
+    collection: "Junior Atelier",
+    price: 3800,
+    originalPrice: 4500,
+    badge: "JUNIOR",
+    rating: 5.0,
+    reviewCount: 29,
+    fitLine: "RELAXED FIT | KIDS",
+    primaryColor: "Desert Camel",
+    colors: [
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" },
+      { name: "Linen White", hex: "#FAF8F5", bgClass: "bg-[#FAF8F5]" }
+    ],
+    sizes: ["4–5", "6–7", "8–9", "10–11"],
+    stockPerSize: { "4–5": 10, "6–7": 16, "8–9": 14, "10–11": 8 },
+    images: ["/images/catalog/men_white_tee_flat.jpg"],
+    description: "Simple, soft, and durable combed organic cotton tee designed for everyday comfort.",
+    fabric: "100% Organic Combed Cotton (220 GSM)",
+    care: "Machine wash cold.",
+    fit: "Relaxed junior cut."
+  },
+  {
+    id: "forme-14",
+    name: "Junior Adventure Chino Shorts",
+    slug: "junior-adventure-chino-shorts",
+    person: "kids",
+    gender: "kids",
+    category: "Kids' Edit",
+    slot: "bottom",
+    style: "shorts",
+    collection: "Junior Atelier",
+    price: 4400,
+    originalPrice: 5200,
+    badge: "JUNIOR",
+    rating: 4.9,
+    reviewCount: 24,
+    fitLine: "RELAXED FIT | KIDS",
+    primaryColor: "Olive Green",
+    colors: [
+      { name: "Olive Green", hex: "#364634", bgClass: "bg-[#364634]" },
+      { name: "Desert Camel", hex: "#C69F6F", bgClass: "bg-[#C69F6F]" },
+      { name: "Obsidian Black", hex: "#111315", bgClass: "bg-[#111315]" }
+    ],
+    sizes: ["4–5", "6–7", "8–9", "10–11"],
+    stockPerSize: { "4–5": 8, "6–7": 15, "8–9": 12, "10–11": 7 },
+    images: ["/images/catalog/men_barrel_jeans_flat.jpg"],
+    description: "Relaxed pull-on cotton twill shorts with comfort waistband for everyday exploring.",
+    fabric: "100% Brushed Cotton Twill",
+    care: "Machine wash warm.",
+    fit: "Easy knee-length cut."
+  },
   // =========================================================================
   // MEN'S COLLECTION: REALISTIC JEANS, T-SHIRTS & SHIRTS (WHITE STUDIO BG)
   // =========================================================================
@@ -523,13 +826,66 @@ const RAW_PRODUCTS = [
   }
 ];
 
-export const PRODUCTS = RAW_PRODUCTS.map(p => ({
-  ...p,
-  gender: p.gender || p.person || 'women',
-  person: p.person || p.gender || 'women',
-  color: p.color || p.colors?.[0]?.hex || '#1E2A38',
-  colorName: p.colorName || p.colors?.[0]?.name || p.primaryColor || 'Indigo Blue'
-}));
+
+function buildDefaultSizeChart(p) {
+  if (p.person === 'kids') {
+    return [
+      { size: '4–5', chestMin: 55, chestMax: 59, waistMin: 52, waistMax: 55, length: 44, shoulder: 28 },
+      { size: '6–7', chestMin: 60, chestMax: 65, waistMin: 55, waistMax: 58, length: 49, shoulder: 31 },
+      { size: '8–9', chestMin: 66, chestMax: 71, waistMin: 58, waistMax: 62, length: 54, shoulder: 34 },
+      { size: '10–11', chestMin: 72, chestMax: 78, waistMin: 62, waistMax: 66, length: 59, shoulder: 37 }
+    ];
+  }
+  if (p.person === 'women') {
+    return [
+      { size: 'XS', chestMin: 80, chestMax: 85, waistMin: 63, waistMax: 68, length: 64, shoulder: 37 },
+      { size: 'S',  chestMin: 85, chestMax: 90, waistMin: 68, waistMax: 73, length: 66, shoulder: 38.5 },
+      { size: 'M',  chestMin: 90, chestMax: 96, waistMin: 73, waistMax: 79, length: 68, shoulder: 40 },
+      { size: 'L',  chestMin: 96, chestMax: 103, waistMin: 79, waistMax: 86, length: 70, shoulder: 41.5 },
+      { size: 'XL', chestMin: 103, chestMax: 110, waistMin: 86, waistMax: 94, length: 72, shoulder: 43 }
+    ];
+  }
+  return [
+    { size: 'XS', chestMin: 86, chestMax: 91, waistMin: 71, waistMax: 76, length: 68, shoulder: 42 },
+    { size: 'S',  chestMin: 91, chestMax: 96, waistMin: 76, waistMax: 81, length: 70, shoulder: 44 },
+    { size: 'M',  chestMin: 96, chestMax: 102, waistMin: 81, waistMax: 87, length: 72, shoulder: 46 },
+    { size: 'L',  chestMin: 102, chestMax: 108, waistMin: 87, waistMax: 93, length: 74, shoulder: 48 },
+    { size: 'XL', chestMin: 108, chestMax: 115, waistMin: 93, waistMax: 100, length: 76, shoulder: 50 }
+  ];
+}
+
+export const PRODUCTS = RAW_PRODUCTS.map(p => {
+  const person = p.person || p.gender || 'women';
+  let sizes = Array.isArray(p.sizes) ? [...p.sizes] : (person === 'kids' ? ['4–5', '6–7', '8–9', '10–11'] : ['XS', 'S', 'M', 'L', 'XL']);
+  if (person !== 'kids') {
+    for (const std of ['XS', 'S', 'M', 'L', 'XL']) {
+      if (!sizes.includes(std)) sizes.push(std);
+    }
+  }
+  const stockPerSize = { ...(p.stockPerSize || {}) };
+  for (const s of sizes) {
+    if (stockPerSize[s] === undefined) stockPerSize[s] = 0;
+  }
+  const isOversized = /oversized|baggy|wide|relaxed|boxy/i.test(p.name + ' ' + (p.fit || ''));
+  const hasStretch = /elastane|spandex|rib|knit|modal/i.test(p.fabric || '') || p.style === 'knit';
+  return {
+    ...p,
+    gender: p.gender || person,
+    person,
+    sizes,
+    stockPerSize,
+    color: p.color || p.colors?.[0]?.hex || '#1E2A38',
+    colorName: p.colorName || p.colors?.[0]?.name || p.primaryColor || 'Indigo Blue',
+    fitType: p.fitType || (isOversized ? 'relaxed' : /slim/i.test(p.fitLine || '') ? 'slim' : 'regular'),
+    fitAdjustment: p.fitAdjustment !== undefined ? p.fitAdjustment : (isOversized ? 0.5 : 0),
+    hasStretch,
+    fitNotes: p.fitNotes || [
+      isOversized ? 'Cut with a relaxed, roomy silhouette (+0.5 fit offset)' : 'Tailored true to Atelier standard measurements',
+      hasStretch ? 'Natural fabric stretch offers extra comfort ease' : 'Rigid weave — fabric has no stretch'
+    ],
+    sizeChart: p.sizeChart || buildDefaultSizeChart({ ...p, person })
+  };
+});
 
 export const CATEGORIES = [
   "All Pieces",

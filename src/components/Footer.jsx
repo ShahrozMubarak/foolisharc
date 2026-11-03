@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
-import { isOwnerAuthorized } from '../utils/adminAuth';
 
 /**
  * Footer - Luxury Camel Signature Editorial Split Footer
@@ -14,13 +13,13 @@ export default function Footer({ onOpenSizeGuide }) {
     try {
       return JSON.parse(
         localStorage.getItem('foolisharc_site_settings') ||
-        '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567"}'
+        '{}'
       );
     } catch {
       return {
-        location: "Gulberg III, Lahore",
-        email: "concierge@foolisharc.com",
-        phone: "+92 300 1234567"
+        location: "",
+        email: "",
+        phone: ""
       };
     }
   });
@@ -38,16 +37,13 @@ export default function Footer({ onOpenSizeGuide }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  if (location.pathname.startsWith('/studio') || location.pathname.startsWith('/admin')) {
-    if (isOwnerAuthorized()) {
-      return null;
-    }
-  }
+  if (location.pathname.startsWith('/studio') || location.pathname.startsWith('/admin')) return null;
 
-  const phoneDisplay = siteSettings.phone || '+92 300 1234567';
-  const emailDisplay = siteSettings.email || 'concierge@foolisharc.com';
-  const locationDisplay = siteSettings.location || 'Gulberg III, Lahore';
-  const waCleanPhone = phoneDisplay.replace(/[^0-9]/g, '') || '923001234567';
+  const phoneDisplay = siteSettings.phone || '';
+  const emailDisplay = siteSettings.email || '';
+  const locationDisplay = siteSettings.location || 'Online Store';
+  const waCleanPhone = phoneDisplay.replace(/[^0-9]/g, '');
+  const hasWhatsAppPhone = waCleanPhone.length >= 10;
 
   return (
     <footer className="bg-[#C69F6F] text-[#1C1612] border-t-2 border-[#7A4B26] select-none transition-colors">
@@ -99,19 +95,21 @@ export default function Footer({ onOpenSizeGuide }) {
                     Track Consignment
                   </Link>
                 </li>
-                <li>
-                  <a
-                    href={`https://wa.me/${waCleanPhone}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-white transition"
-                  >
-                    WhatsApp Concierge
-                  </a>
-                </li>
+                {hasWhatsAppPhone && (
+                  <li>
+                    <a
+                      href={`https://wa.me/${waCleanPhone}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-white transition"
+                    >
+                      WhatsApp Concierge
+                    </a>
+                  </li>
+                )}
                 <li>
                   <span className="text-xs font-mono font-bold text-[#473320]">
-                    TCS Express Insured
+                    Tracked Delivery
                   </span>
                 </li>
               </ul>
@@ -122,16 +120,20 @@ export default function Footer({ onOpenSizeGuide }) {
                 Contact
               </p>
               <ul className="space-y-2.5 text-[#2C1F13] font-bold normal-case tracking-normal text-sm">
-                <li>
-                  <a href={`tel:${phoneDisplay}`} className="hover:text-white transition">
-                    {phoneDisplay}
-                  </a>
-                </li>
-                <li>
-                  <a href={`mailto:${emailDisplay}`} className="hover:text-white transition">
-                    {emailDisplay}
-                  </a>
-                </li>
+                {phoneDisplay && (
+                  <li>
+                    <a href={`tel:${phoneDisplay}`} className="hover:text-white transition">
+                      {phoneDisplay}
+                    </a>
+                  </li>
+                )}
+                {emailDisplay && (
+                  <li>
+                    <a href={`mailto:${emailDisplay}`} className="hover:text-white transition">
+                      {emailDisplay}
+                    </a>
+                  </li>
+                )}
                 <li className="text-[#473320] text-xs font-mono font-bold">
                   {locationDisplay}
                 </li>

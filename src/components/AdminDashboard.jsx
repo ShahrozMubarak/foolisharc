@@ -5,12 +5,15 @@ import {
   saveProductToDB,
   deleteProductFromDB,
   fetchOrdersFromDB,
+  fetchOrderReceipt,
   updateOrderStatusInDB,
   approveOrderInDB,
   fetchSubscribersFromDB,
   deleteSubscriberFromDB,
   fetchCustomersFromDB,
-  fetchInquiriesFromDB
+  fetchInquiriesFromDB,
+  fetchThemeFromDB,
+  saveThemeToDB
 } from '../services/api';
 import { notifyOrderApproved, notifyOrderStatusChange } from '../services/notificationService';
 import ChartJS from 'chart.js/auto';
@@ -25,7 +28,7 @@ const ADMIN_THEMES = [
     id: "camel-atelier",
     shortName: "Warm Camel & Sand Atelier",
     company: "FOOLISH ARC",
-    welcome: "Welcome back, Shahroz",
+    welcome: "Welcome back",
     sub: "Live atelier overview, client orders & store management",
     bgOuter: "#E6DDD0",
     bgCanvas: "#FAF6F0",
@@ -76,40 +79,41 @@ export default function AdminDashboard({
     try {
       return JSON.parse(
         localStorage.getItem('foolisharc_site_settings') ||
-        '{"location":"Gulberg III, Lahore","email":"concierge@foolisharc.com","phone":"+92 300 1234567","hours":"Mon - Sat: 10:00 AM - 8:00 PM PKT"}'
+        '{}'
       );
     } catch {
-      return {
-        location: "Gulberg III, Lahore",
-        email: "concierge@foolisharc.com",
-        phone: "+92 300 1234567",
-        hours: "Mon - Sat: 10:00 AM - 8:00 PM PKT"
-      };
+      return { location: '', email: '', phone: '', hours: '' };
     }
   });
   const [siteSettingsSaved, setSiteSettingsSaved] = useState(false);
 
-  const handleSaveSiteSettings = () => {
-    localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings));
-    window.dispatchEvent(new Event('storage'));
-    setSiteSettingsSaved(true);
-    showToast("Site address & contact settings saved and synced!");
-    setTimeout(() => setSiteSettingsSaved(false), 3500);
+  useEffect(() => {
+    let active = true;
+    fetchThemeFromDB()
+      .then(config => {
+        if (active && config?.siteSettings) setSiteSettings(config.siteSettings);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const handleSaveSiteSettings = async () => {
+    try {
+      await saveThemeToDB({ ...(themeConfig || {}), siteSettings });
+      localStorage.setItem('foolisharc_site_settings', JSON.stringify(siteSettings));
+      window.dispatchEvent(new Event('storage'));
+      setSiteSettingsSaved(true);
+      showToast('Store contact details saved.');
+      setTimeout(() => setSiteSettingsSaved(false), 3500);
+    } catch (error) {
+      showToast(error?.message || 'Contact details could not be saved.');
+    }
   };
 
   // Live MongoDB States
   const [liveProducts, setLiveProducts] = useState(propProducts);
-  const [liveOrders, setLiveOrders] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-      const map = new Map();
-      (propOrders || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-      (stored || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-      return Array.from(map.values());
-    } catch {
-      return propOrders || [];
-    }
-  });
+  // Administrative order data comes only from the authenticated API, never browser storage.
+  const [liveOrders, setLiveOrders] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [inquiries, setInquiries] = useState([]);
@@ -172,15 +176,7 @@ export default function AdminDashboard({
       ]);
 
       if (Array.isArray(dbProds) && dbProds.length > 0) setLiveProducts(dbProds);
-      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-        setLiveOrders(prev => {
-          const map = new Map();
-          (propOrders || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-          (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-          dbOrders.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-          return Array.from(map.values());
-        });
-      }
+      if (Array.isArray(dbOrders)) setLiveOrders(dbOrders);
       if (Array.isArray(dbSubs)) setSubscribers(dbSubs);
       if (Array.isArray(dbCusts)) setCustomers(dbCusts);
       if (Array.isArray(dbInqs)) setInquiries(dbInqs);
@@ -196,86 +192,53 @@ export default function AdminDashboard({
     loadAllDataFromMongoDB();
   }, []);
 
-  // Real-time synchronization when orders are placed on storefront
-  useEffect(() => {
-    const handleStorageUpdate = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-        if (Array.isArray(stored) && stored.length > 0) {
-          setLiveOrders(prev => {
-            const map = new Map();
-            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            stored.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            return Array.from(map.values());
-          });
-        }
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorageUpdate);
-    return () => window.removeEventListener('storage', handleStorageUpdate);
-  }, []);
+
 
   useEffect(() => {
     if (propProducts && propProducts.length > 0) setLiveProducts(propProducts);
   }, [propProducts]);
 
   useEffect(() => {
-    if (propOrders && propOrders.length > 0) {
-      setLiveOrders(prev => {
-        if (!prev || prev.length === 0) return propOrders;
-        const prevMap = new Map();
-        prev.forEach(o => {
-          if (o) {
-            const key = String(o._id || o.orderNumber || o.id).toLowerCase();
-            prevMap.set(key, o);
-          }
-        });
-        const merged = propOrders.map(po => {
-          const key = String(po._id || po.orderNumber || po.id).toLowerCase();
-          const existing = prevMap.get(key);
-          return existing ? { ...po, ...existing } : po;
-        });
-        const mergedKeys = new Set(merged.map(o => String(o._id || o.orderNumber || o.id).toLowerCase()));
-        const extras = prev.filter(o => o && !mergedKeys.has(String(o._id || o.orderNumber || o.id).toLowerCase()));
-        return [...merged, ...extras];
-      });
+    if (Array.isArray(propOrders) && propOrders.length > 0 && liveOrders.length === 0) {
+      setLiveOrders(propOrders);
     }
-  }, [propOrders]);
+  }, [propOrders, liveOrders.length]);
 
-  // Proactively refresh orders whenever user switches to or views the Orders tab
+  // Refresh owner-only records when the Orders tab is opened.
   useEffect(() => {
-    if (activeTab === 'orders') {
-      try {
-        const stored = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-        if (Array.isArray(stored) && stored.length > 0) {
-          setLiveOrders(prev => {
-            const map = new Map();
-            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            stored.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            return Array.from(map.values());
-          });
-        }
-      } catch {}
-
-      fetchOrdersFromDB().then(dbOrders => {
-        if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-          setLiveOrders(prev => {
-            const map = new Map();
-            (prev || []).forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            dbOrders.forEach(o => { if (o) map.set(String(o._id || o.orderNumber || o.id).toLowerCase(), o); });
-            return Array.from(map.values());
-          });
-        }
-      }).catch(() => {});
-    }
+    if (activeTab !== 'orders') return;
+    let active = true;
+    fetchOrdersFromDB()
+      .then(dbOrders => { if (active && Array.isArray(dbOrders)) setLiveOrders(dbOrders); })
+      .catch(error => {
+        if (active) showToast(error?.message || 'Could not refresh orders.');
+      });
+    return () => { active = false; };
   }, [activeTab]);
 
-  // Total Gross Revenue Calculation
-  const totalRevenue = useMemo(() => {
-    return liveOrders.reduce((sum, ord) => sum + Number(ord.total || ord.pricing?.finalTotal || 0), 0);
-  }, [liveOrders]);
+  // Store KPIs use saved database records; cancelled orders are excluded from revenue.
+  const completedSalesOrders = useMemo(
+    () => liveOrders.filter(order => (order.status || '').toLowerCase() !== 'cancelled'),
+    [liveOrders]
+  );
+  const totalRevenue = useMemo(
+    () => completedSalesOrders.reduce((sum, order) => sum + Number(order.total || order.pricing?.finalTotal || 0), 0),
+    [completedSalesOrders]
+  );
+  const pendingOrders = useMemo(
+    () => liveOrders.filter(order => (order.status || 'pending').toLowerCase() === 'pending').length,
+    [liveOrders]
+  );
+  const categoryStats = useMemo(() => {
+    const counts = new Map();
+    liveProducts.forEach(product => {
+      const category = String(product.category || 'Other').trim() || 'Other';
+      counts.set(category, (counts.get(category) || 0) + 1);
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  }, [liveProducts]);
 
-  // Dual Line Chart (Sales Performance: Earnings vs Costs)
+  // Dual Line Chart (Order Revenue: Earnings vs Costs)
   useEffect(() => {
     if (!salesCanvasRef.current) return;
     const ctx = salesCanvasRef.current.getContext('2d');
@@ -283,37 +246,40 @@ export default function AdminDashboard({
       salesChartRef.current.destroy();
     }
 
-    const days = ["03 Wed", "04 Thu", "05 Fri", "06 Sat", "07 Sun", "08 Mon", "09 Tue", "10 Wed", "11 Thu", "12 Fri", "13 Sat", "14 Sun", "15 Mon", "16 Tue"];
+    const dayCount = timeRange === 'This Quarter' ? 90 : (timeRange === 'Last 30 Days' ? 30 : 14);
+    const today = new Date();
+    const buckets = Array.from({ length: dayCount }, (_, index) => {
+      const date = new Date(today);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (dayCount - index - 1));
+      return { date, total: 0 };
+    });
 
-    // Adjust data based on timeRange
-    const multiplier = timeRange === 'This Quarter' ? 2.2 : (timeRange === 'Last 30 Days' ? 1.5 : 1.0);
-    const earningsData = activeTheme.earnings.map(v => Math.round(v * multiplier));
-    const costsData = activeTheme.costs.map(v => Math.round(v * multiplier));
+    completedSalesOrders.forEach(order => {
+      const orderDate = new Date(order.createdAt || order.date || '');
+      if (Number.isNaN(orderDate.getTime())) return;
+      orderDate.setHours(0, 0, 0, 0);
+      const bucket = buckets.find(item => item.date.getTime() === orderDate.getTime());
+      if (bucket) bucket.total += Number(order.total || order.pricing?.finalTotal || 0);
+    });
+
+    const chartLabels = buckets.map(item => item.date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }));
+    const revenueData = buckets.map(item => Math.round(item.total));
 
     salesChartRef.current = new ChartJS(ctx, {
       type: 'line',
       data: {
-        labels: days,
+        labels: chartLabels,
         datasets: [
           {
-            label: 'Earnings',
-            data: earningsData,
+            label: 'Order revenue (PKR)',
+            data: revenueData,
             borderColor: activeTheme.accent,
             backgroundColor: 'transparent',
             borderWidth: 2.8,
             pointRadius: 0,
             pointHoverRadius: 6,
-            tension: 0.42
-          },
-          {
-            label: 'Costs',
-            data: costsData,
-            borderColor: '#D4D4D8',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            tension: 0.42
+            tension: 0.32
           }
         ]
       },
@@ -338,7 +304,7 @@ export default function AdminDashboard({
           },
           y: {
             min: 0,
-            ticks: { stepSize: 15 * multiplier, color: '#A1A1AA', font: { size: 10 } },
+            ticks: { color: '#A1A1AA', font: { size: 10 } },
             grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }
           }
         }
@@ -348,7 +314,7 @@ export default function AdminDashboard({
     return () => {
       if (salesChartRef.current) salesChartRef.current.destroy();
     };
-  }, [activeThemeIdx, timeRange, activeTab]);
+  }, [activeThemeIdx, timeRange, activeTab, completedSalesOrders]);
 
   // Donut Chart (Top Categories)
   useEffect(() => {
@@ -361,9 +327,9 @@ export default function AdminDashboard({
     donutChartRef.current = new ChartJS(ctx, {
       type: 'doughnut',
       data: {
-        labels: activeTheme.cats,
+        labels: categoryStats.map(([category]) => category),
         datasets: [{
-          data: activeTheme.catData,
+          data: categoryStats.map(([, count]) => count),
           backgroundColor: [activeTheme.accent, '#71717A', '#E4E4E7'],
           borderWidth: 0,
           cutout: '76%'
@@ -389,7 +355,7 @@ export default function AdminDashboard({
     return () => {
       if (donutChartRef.current) donutChartRef.current.destroy();
     };
-  }, [activeThemeIdx, activeTab]);
+  }, [activeThemeIdx, activeTab, categoryStats]);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -428,59 +394,38 @@ export default function AdminDashboard({
 
   // Handle Order Status Change
   const handleStatusChange = async (orderId, newStatus) => {
-    if (!orderId) {
-      console.warn("handleStatusChange called without orderId");
-      return;
-    }
-    const cleanId = String(orderId).toLowerCase().trim();
+    if (!orderId) return;
     const normalizedStatus = String(newStatus || 'pending').toLowerCase().trim();
 
-    // 1. Immediately update local state in AdminDashboard
-    setLiveOrders(prev =>
-      prev.map(o => {
-        if (!o) return o;
-        const num = String(o.orderNumber || '').toLowerCase().trim();
-        const id = String(o.id || '').toLowerCase().trim();
-        const mongoId = String(o._id || '').toLowerCase().trim();
-        if (num === cleanId || id === cleanId || mongoId === cleanId) {
-          return { ...o, status: normalizedStatus };
-        }
-        return o;
-      })
-    );
-
-    if (selectedOrderDetails) {
-      const modalNum = String(selectedOrderDetails.orderNumber || '').toLowerCase().trim();
-      const modalId = String(selectedOrderDetails.id || '').toLowerCase().trim();
-      const modalMongoId = String(selectedOrderDetails._id || '').toLowerCase().trim();
-      if (modalNum === cleanId || modalId === cleanId || modalMongoId === cleanId) {
-        setSelectedOrderDetails(prev => (prev ? { ...prev, status: normalizedStatus } : null));
-      }
-    }
-
-    // 2. Persist to MongoDB and local storage
     try {
-      await updateOrderStatusInDB(orderId, normalizedStatus);
-    } catch (e) {
-      console.warn("updateOrderStatusInDB note:", e);
-    }
+      const result = await updateOrderStatusInDB(orderId, normalizedStatus);
+      const updatedOrder = result?.order || result;
+      const cleanId = String(orderId).toLowerCase().trim();
 
-    // 3. Notify parent component (App.jsx)
-    if (typeof onUpdateOrderStatus === 'function') {
-      try {
-        onUpdateOrderStatus(orderId, normalizedStatus);
-      } catch (err) {
-        console.warn("onUpdateOrderStatus note:", err);
+      setLiveOrders(prev => prev.map(order => {
+        const keys = [order?.orderNumber, order?.id, order?._id].map(value => String(value || '').toLowerCase());
+        return keys.includes(cleanId) ? { ...order, ...updatedOrder } : order;
+      }));
+      setSelectedOrderDetails(prev => {
+        if (!prev) return prev;
+        const keys = [prev.orderNumber, prev.id, prev._id].map(value => String(value || '').toLowerCase());
+        return keys.includes(cleanId) ? { ...prev, ...updatedOrder } : prev;
+      });
+
+      if (Array.isArray(result?.inventory)) {
+        setLiveProducts(prev => prev.map(product =>
+          result.inventory.find(item => item.id === product.id) || product
+        ));
       }
-    }
+      if (typeof onUpdateOrderStatus === 'function') {
+        onUpdateOrderStatus(orderId, normalizedStatus, result);
+      }
 
-    // 4. Send background notification & toast
-    try {
       notifyOrderStatusChange(orderId, normalizedStatus);
-    } catch (notifErr) {
-      console.warn("Notification error:", notifErr);
+      showToast(`Order status updated to ${normalizedStatus}.`);
+    } catch (error) {
+      showToast(error?.message || 'The order could not be updated. Please retry.');
     }
-    showToast(`Order status updated to ${normalizedStatus}`);
   };
 
   // Handle Order Approval & Transcript
@@ -495,13 +440,14 @@ export default function AdminDashboard({
     setApprovalLoading(true);
     try {
       const res = await approveOrderInDB(orderId);
-      const trackingNumber = res?.trackingNumber || res?.order?.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
+      const trackingNumber = res?.trackingNumber || res?.order?.trackingNumber;
+      if (!trackingNumber) throw new Error('The server did not assign a tracking number.');
       const updatedOrder = {
         ...order,
+        ...(res.order || {}),
         status: 'approved',
-        courier: 'TCS Express',
-        trackingNumber: trackingNumber,
-        approvedAt: new Date().toISOString()
+        courier: res.order?.courier || 'Courier partner',
+        trackingNumber
       };
 
       setLiveOrders(prev =>
@@ -518,13 +464,9 @@ export default function AdminDashboard({
       );
       setSelectedOrderDetails(prev => (prev ? { ...prev, ...updatedOrder } : null));
 
-      try {
-        await updateOrderStatusInDB(orderId, 'approved', { trackingNumber, courier: 'TCS Express', approvedAt: new Date().toISOString() });
-      } catch (e) {}
-
       if (typeof onUpdateOrderStatus === 'function') {
         try {
-          onUpdateOrderStatus(orderId, 'approved');
+          onUpdateOrderStatus(orderId, 'approved', { order: updatedOrder });
         } catch {}
       }
 
@@ -535,14 +477,18 @@ export default function AdminDashboard({
       }
 
       const cleanPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '');
+      if (cleanPhone.length < 10) {
+        showToast('Order approved. Add a valid customer phone number to send a WhatsApp update.');
+        return;
+      }
       const formattedPhone = cleanPhone.startsWith('0')
         ? '92' + cleanPhone.slice(1)
         : (cleanPhone.startsWith('92') ? cleanPhone : '92' + cleanPhone);
 
-      const msg = `Assalam-o-Alaikum ${order.customer?.firstName || 'Valued Client'},\n\nYour FOOLISH ARC order #${order.orderNumber || order.id} has been verified and APPROVED.\n\nConsignment Tracking: ${trackingNumber}\nCourier: TCS Express\nLive Track: ${window.location.origin}/track/${order.orderNumber || order.id}\n\nThank you for choosing FOOLISH ARC.`;
+      const msg = `Assalam-o-Alaikum ${order.customer?.firstName || 'Valued Client'},\n\nYour FOOLISH ARC order #${order.orderNumber || order.id} has been approved.\n\nTracking reference: ${trackingNumber}\nCourier: ${updatedOrder.courier || 'Courier partner'}\nTrack your order: ${window.location.origin}/track/${order.orderNumber || order.id}\n\nThank you for choosing FOOLISH ARC.`;
 
       const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
-      showToast("Order Approved! Opening WhatsApp dispatch message...");
+      showToast('Order approved. Opening WhatsApp message…');
       window.open(waUrl, '_blank');
     } catch (err) {
       console.error("Error approving order:", err);
@@ -557,7 +503,7 @@ export default function AdminDashboard({
     if (!order) return '';
     const dateStr = order.createdAt || new Date().toLocaleDateString();
     const itemsList = (order.items || []).map((it, idx) => 
-      `  [${idx + 1}] ${it.name} | Size: ${it.size || 'M'} | Qty: ${it.quantity || 1} | Price: PKR ${(it.price || 0).toLocaleString()}`
+      `  [${idx + 1}] ${it.name} | Size: ${it.size || 'M'} | Qty: ${it.quantity || 1} | Price: PKR ${(it.unitPrice ?? it.price ?? 0).toLocaleString()}`
     ).join('\n');
 
     return `=======================================================
@@ -577,7 +523,7 @@ Destination:    ${order.customer?.address || 'N/A'}, ${order.customer?.city || '
 SETTLEMENT & PAYMENT:
 Payment Method: ${String(order.paymentMethod || 'cod').toLowerCase()}
 Total Amount:   PKR ${(order.total || order.pricing?.finalTotal || 0).toLocaleString()}
-Courier Partner: ${order.courier || 'TCS Express'}
+Courier Partner: ${order.courier || 'Courier partner'}
 Consignment No: ${order.trackingNumber || 'Pending Dispatch Assignment'}
 
 ITEMS MANIFEST:
@@ -709,48 +655,62 @@ FOOLISH ARC Atelier | contact@foolisharc.com
       description: productForm.description
     };
 
-    setLiveProducts(prev => {
-      const idx = prev.findIndex(p => p.id === targetId);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = { ...copy[idx], ...productPayload };
-        return copy;
-      }
-      return [productPayload, ...prev];
-    });
-
-    if (onAddProduct) onAddProduct(productPayload);
-    await saveProductToDB(productPayload);
-    setIsProductModalOpen(false);
-    showToast(`Garment "${productPayload.name}" saved to inventory!`);
+    try {
+      const savedProduct = onAddProduct
+        ? await onAddProduct(productPayload)
+        : await saveProductToDB(productPayload);
+      setLiveProducts(prev => {
+        const idx = prev.findIndex(product => product.id === savedProduct.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = savedProduct;
+          return copy;
+        }
+        return [savedProduct, ...prev];
+      });
+      setIsProductModalOpen(false);
+      showToast(`Garment "${savedProduct.name}" saved to inventory.`);
+    } catch (error) {
+      showToast(error?.message || 'The product could not be saved.');
+    }
   };
 
-  const handleInlineStockChange = (prodId, size, delta) => {
-    setLiveProducts(prev =>
-      prev.map(p => {
-        if (p.id !== prodId) return p;
-        const currentStockMap = p.stockPerSize || { XS: 2, S: 5, M: 8, L: 4, XL: 2 };
-        const newSizeStock = Math.max(0, (currentStockMap[size] || 0) + delta);
-        const updatedMap = { ...currentStockMap, [size]: newSizeStock };
-        const updatedTotal = Object.values(updatedMap).reduce((a, b) => a + b, 0);
-        const updatedProd = { ...p, stockPerSize: updatedMap, stock: updatedTotal };
-        if (onUpdateProductStock) onUpdateProductStock(prodId, size, newSizeStock);
-        saveProductToDB(updatedProd);
-        return updatedProd;
-      })
-    );
+  const handleInlineStockChange = async (prodId, size, delta) => {
+    const product = liveProducts.find(item => item.id === prodId);
+    if (!product) return;
+
+    const currentStockMap = product.stockPerSize || {};
+    const newSizeStock = Math.max(0, Number(currentStockMap[size] || 0) + delta);
+    const updatedProduct = {
+      ...product,
+      stockPerSize: { ...currentStockMap, [size]: newSizeStock }
+    };
+
+    try {
+      const savedProduct = onUpdateProductStock
+        ? await onUpdateProductStock(prodId, size, newSizeStock)
+        : await saveProductToDB(updatedProduct);
+      setLiveProducts(prev => prev.map(item => item.id === prodId ? savedProduct : item));
+      showToast(`Stock updated for size ${size}.`);
+    } catch (error) {
+      showToast(error?.message || 'Stock could not be updated.');
+    }
   };
 
   const handleDeleteProductConfirm = async (prodId) => {
-    if (!window.confirm("Remove this garment from public catalog?")) return;
-    setLiveProducts(prev => prev.filter(p => p.id !== prodId));
-    if (onDeleteProduct) onDeleteProduct(prodId);
-    await deleteProductFromDB(prodId);
-    showToast("Garment removed from catalog.");
+    if (!window.confirm('Remove this garment from the public catalog?')) return;
+    try {
+      if (onDeleteProduct) await onDeleteProduct(prodId);
+      else await deleteProductFromDB(prodId);
+      setLiveProducts(prev => prev.filter(product => product.id !== prodId));
+      showToast('Garment removed from catalog.');
+    } catch (error) {
+      showToast(error?.message || 'The garment could not be deleted.');
+    }
   };
 
-  const adminName = user?.firstName || user?.name || "Shahroz";
-  const userInitials = String(user?.name || "Shahroz Mubarak")
+  const adminName = user?.firstName || user?.name || user?.email || "Owner";
+  const userInitials = String(user?.name || user?.email || "Owner")
     .split(' ')
     .filter(Boolean)
     .map(n => n[0])
@@ -1257,7 +1217,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 className="text-2xl sm:text-[28px] font-black tracking-tight"
                 style={{ color: activeTheme.textMain }}
               >
-                {activeTheme.welcome.includes('Matthew') ? `Welcome back, ${adminName}` : activeTheme.welcome}
+                {`Welcome back, ${adminName}`}
               </h1>
               <p
                 className="text-xs sm:text-[13px] font-medium mt-1"
@@ -1334,7 +1294,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                       <div>
                         <div className="text-sm font-bold tracking-tight">Total Sales</div>
                         <div className="text-[11px] opacity-75 font-semibold">
-                          {liveOrders.length > 0 ? `${liveOrders.length} Orders` : activeTheme.kpi1.sub}
+                          {completedSalesOrders.length} database orders
                         </div>
                       </div>
                     </div>
@@ -1342,17 +1302,15 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                   </div>
 
                   <div className="text-3xl sm:text-[34px] font-black tracking-tight my-3">
-                    {totalRevenue > 0
-                      ? `PKR ${totalRevenue.toLocaleString()}`
-                      : activeTheme.kpi1.val}
+                    {`PKR ${totalRevenue.toLocaleString()}`}
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-1 font-bold">
                     <span className="flex items-center gap-1">
                       <span>↗</span>
-                      <span>{activeTheme.kpi1.delta}</span>
+                      <span>Database totals</span>
                     </span>
-                    <span className="opacity-75">{activeTheme.kpi1.week}</span>
+                    <span className="opacity-75">Cancelled orders excluded</span>
                   </div>
                 </div>
 
@@ -1375,9 +1333,9 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                         </svg>
                       </div>
                       <div>
-                        <div className="text-sm font-bold tracking-tight">Visitors</div>
+                        <div className="text-sm font-bold tracking-tight">Catalog Products</div>
                         <div className="text-[11px] font-semibold" style={{ color: activeTheme.textMuted }}>
-                          {activeTheme.kpi2.sub}
+                          Live products in catalog
                         </div>
                       </div>
                     </div>
@@ -1385,15 +1343,15 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                   </div>
 
                   <div className="text-3xl sm:text-[34px] font-black tracking-tight my-3">
-                    {activeTheme.kpi2.val}
+                    {liveProducts.length.toLocaleString()}
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-1 font-bold">
                     <span className="flex items-center gap-1" style={{ color: activeTheme.accent }}>
                       <span>↗</span>
-                      <span>{activeTheme.kpi2.delta}</span>
+                      <span>Current catalog</span>
                     </span>
-                    <span style={{ color: activeTheme.textMuted }}>{activeTheme.kpi2.week}</span>
+                    <span style={{ color: activeTheme.textMuted }}>Database inventory</span>
                   </div>
                 </div>
 
@@ -1416,9 +1374,9 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                         </svg>
                       </div>
                       <div>
-                        <div className="text-sm font-bold tracking-tight">Refunds</div>
+                        <div className="text-sm font-bold tracking-tight">Pending Orders</div>
                         <div className="text-[11px] font-semibold" style={{ color: activeTheme.textMuted }}>
-                          {activeTheme.kpi3.sub}
+                          Awaiting owner review
                         </div>
                       </div>
                     </div>
@@ -1426,28 +1384,28 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                   </div>
 
                   <div className="text-3xl sm:text-[34px] font-black tracking-tight my-3">
-                    {activeTheme.kpi3.val}
+                    {pendingOrders.toLocaleString()}
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-1 font-bold">
                     <span className="flex items-center gap-1 text-emerald-600">
                       <span>↘</span>
-                      <span>{activeTheme.kpi3.delta}</span>
+                      <span>Needs attention</span>
                     </span>
-                    <span style={{ color: activeTheme.textMuted }}>{activeTheme.kpi3.week}</span>
+                    <span style={{ color: activeTheme.textMuted }}>Current queue</span>
                   </div>
                 </div>
               </div>
 
               {/* ROW 2: SALES PERFORMANCE LINE CHART + TOP CATEGORIES DONUT CHART */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Left Card: Sales Performance (Cols 1-8) */}
+                {/* Left Card: Order Revenue (Cols 1-8) */}
                 <div
                   className="lg:col-span-8 rounded-[26px] p-6 sm:p-7 shadow-sm border border-black/5 flex flex-col justify-between transition-colors duration-500"
                   style={{ backgroundColor: activeTheme.cardBg, color: activeTheme.textMain }}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <h2 className="text-base font-black tracking-tight">Sales Performance</h2>
+                    <h2 className="text-base font-black tracking-tight">Order Revenue</h2>
                     <div className="flex items-center gap-2.5 text-xs">
                       <button
                         type="button"
@@ -1469,16 +1427,8 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     </div>
                   </div>
 
-                  {/* Legend Row */}
-                  <div className="flex items-center gap-6 text-xs mb-4" style={{ color: activeTheme.textMuted }}>
-                    <span className="flex items-center gap-2 font-bold">
-                      <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: activeTheme.accent }}></span>
-                      <span>Earnings</span>
-                    </span>
-                    <span className="flex items-center gap-2 font-bold">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-[#D4D4D8] inline-block"></span>
-                      <span>Costs</span>
-                    </span>
+                  <div className="mb-4 text-xs font-semibold" style={{ color: activeTheme.textMuted }}>
+                    Daily order revenue in PKR · saved orders only
                   </div>
 
                   {/* Dual Wave Line Canvas */}
@@ -1499,7 +1449,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     {/* Centered Total Value Inside Ring */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <span className="text-xl font-black tracking-tight" style={{ color: activeTheme.textMain }}>
-                        {activeTheme.donutVal}
+                        {liveProducts.length}
                       </span>
                     </div>
                   </div>
@@ -1509,21 +1459,21 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2.5 font-bold">
                         <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: activeTheme.accent }}></span>
-                        <span>{activeTheme.cats[0]}</span>
+                        <span>{categoryStats[0]?.[0] || '—'}</span>
                       </span>
-                      <span className="font-extrabold">$3,420</span>
+                      <span className="font-extrabold">{categoryStats[0]?.[1] || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2.5 font-bold">
                         <span className="w-3 h-3 rounded-sm bg-[#71717A] inline-block"></span>
-                        <span>{activeTheme.cats[1]}</span>
+                        <span>{categoryStats[1]?.[0] || '—'}</span>
                       </span>
-                      <span className="font-extrabold">$1,840</span>
+                      <span className="font-extrabold">{categoryStats[1]?.[1] || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2.5 font-bold">
                         <span className="w-3 h-3 rounded-sm bg-[#E4E4E7] inline-block"></span>
-                        <span>{activeTheme.cats[2]}</span>
+                        <span>{categoryStats[2]?.[0] || '—'}</span>
                       </span>
                       <span className="font-extrabold">$940</span>
                     </div>
@@ -1840,10 +1790,13 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                                 <span className="uppercase text-[11px] font-bold text-neutral-800">
                                   {ord.paymentMethod || 'COD'}
                                 </span>
-                                {ord.paymentReceipt && (
+                                {(ord.receiptUploadedAt || ord.receiptFileName || ord.paymentReceipt) && (
                                   <button
                                     type="button"
-                                    onClick={() => setEnlargedReceipt(ord.paymentReceipt)}
+                                    onClick={async () => {
+                                      try { setEnlargedReceipt(ord.paymentReceipt || await fetchOrderReceipt(ord._id)); }
+                                      catch (error) { window.alert(error.message); }
+                                    }}
                                     className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black hover:bg-emerald-200"
                                     title="View attached payment proof screenshot"
                                   >
@@ -2099,7 +2052,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     </label>
                     <input
                       type="text"
-                      value={siteSettings.hours || 'Mon - Sat: 10:00 AM - 8:00 PM PKT'}
+                      value={siteSettings.hours || ''}
                       onChange={(e) => setSiteSettings({ ...siteSettings, hours: e.target.value })}
                       placeholder="e.g. Mon - Sat: 10:00 AM - 8:00 PM PKT"
                       className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
@@ -2416,7 +2369,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 Order #{selectedOrderDetails.orderNumber || selectedOrderDetails.id}
               </h3>
               <p className="text-xs text-neutral-500">
-                Created: {selectedOrderDetails.createdAt || 'Recent'} | Courier: {selectedOrderDetails.courier || 'TCS Express'}
+                Created: {selectedOrderDetails.createdAt || 'Recent'} | Courier: {selectedOrderDetails.courier || 'Courier partner'}
               </p>
             </div>
 
@@ -2595,7 +2548,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     disabled={approvalLoading}
                     className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm cursor-pointer"
                   >
-                    Approve &amp; Dispatch TCS
+                    Approve Order &amp; Assign Courier
                   </button>
                 )}
                 <button

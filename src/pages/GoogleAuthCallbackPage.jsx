@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { parseGoogleHash, fetchGoogleVerifiedUser, redirectToGoogleLogin } from '../utils/googleAuth';
+import {
+  parseGoogleCallbackParams,
+  exchangeGoogleAuthCode,
+  redirectToGoogleLogin
+} from '../utils/googleAuth';
 
 /**
- * GoogleAuthCallbackPage - Handles the redirect return from accounts.google.com.
- * Strictly verifies the credentials with Google and returns user to the store with their cart item.
- * No alternate, guest, or unverified logins are allowed.
+ * GoogleAuthCallbackPage - Handles the redirect return from accounts.google.com
+ * using OAuth 2.0 Authorization Code + PKCE (with backward-compatible token verification).
  */
 export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [status, setStatus] = useState('verifying'); // 'verifying' | 'success' | 'error'
+  const [status, setStatus] = useState('verifying');
   const [errorMessage, setErrorMessage] = useState('');
   const [pendingCartItem, setPendingCartItem] = useState(null);
 
+  const started=useRef(false);
   useEffect(() => {
+    if(started.current) return;
+    started.current=true;
     async function handleCallback() {
-      // Check for pending cart item saved before redirect
       let pendingItem = null;
       try {
         const savedPending = sessionStorage.getItem('zaytoun_pending_cart_item');
@@ -29,19 +34,16 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
       }
 
       try {
-        const hashParams = parseGoogleHash(location.hash);
+        const callbackParams = parseGoogleCallbackParams(location.search, location.hash);
 
-        if (hashParams.error) {
-          throw new Error(hashParams.errorDescription || `Google authentication error: ${hashParams.error}`);
+        if (callbackParams.error) {
+          throw new Error(callbackParams.errorDescription || `Google authentication error: ${callbackParams.error}`);
         }
 
-        if (!hashParams.accessToken) {
-          throw new Error("No authorization token received from Google. Please sign in with your Google account.");
-        }
-
-        // Verify with Google's Userinfo API
-        const verifiedUser = await fetchGoogleVerifiedUser(hashParams.accessToken);
-
+        const expected=sessionStorage.getItem('foolisharc_oauth_state');
+        sessionStorage.removeItem('foolisharc_oauth_state');
+        if(!expected || callbackParams.state!==expected || !callbackParams.code) throw new Error('This sign-in link has expired. Please sign in again.');
+        const verifiedUser=await exchangeGoogleAuthCode(callbackParams.code);
         sessionStorage.removeItem('zaytoun_pending_cart_item');
         const returnUrl = sessionStorage.getItem('zaytoun_auth_return_url') || '/shop';
         sessionStorage.removeItem('zaytoun_auth_return_url');
@@ -53,9 +55,9 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
         }
 
         setTimeout(() => {
-          navigate(returnUrl, { replace: true });
-        }, 1000);
-
+          const target=new URL(returnUrl,window.location.origin);
+          navigate(target.origin===window.location.origin && target.pathname!=='/auth/google/callback' ? target.pathname+target.search : '/shop',{replace:true});
+        }, 900);
       } catch (err) {
         console.error("Google Auth Verification Notice:", err);
         setStatus('error');
@@ -67,25 +69,22 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
   }, [location, navigate, onAuthSuccess]);
 
   const handleRetryGoogleLogin = () => {
-    try {
-      redirectToGoogleLogin({ pendingItem: pendingCartItem });
-    } catch {
+    redirectToGoogleLogin({ pendingItem: pendingCartItem }).catch(() => {
       navigate('/shop');
-    }
+    });
   };
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white dark:bg-onyx-950 rounded-none p-8 border border-neutral-200 dark:border-onyx-800 shadow-2xl text-center">
-        
         {status === 'verifying' && (
           <div className="space-y-4">
             <div className="w-12 h-12 border-2 border-black dark:border-white border-t-transparent animate-spin mx-auto" />
             <h2 className="text-xl font-bold uppercase tracking-tight text-neutral-900 dark:text-white">
-              Verifying with Google...
+              Verifying with Google (PKCE)...
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Contacting Google Identity Services to verify your account credentials.
+              Completing secure OAuth 2.0 Authorization Code + PKCE verification.
             </p>
           </div>
         )}
@@ -113,7 +112,7 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
               Google Sign-In Required
             </h2>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              {errorMessage || "Authentic Google verification is strictly required to access your cart and place orders. No unverified logins are permitted."}
+              {errorMessage || "Authentic Google verification is strictly required to access your account."}
             </p>
 
             <div className="pt-3 space-y-2">
@@ -121,12 +120,6 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
                 onClick={handleRetryGoogleLogin}
                 className="w-full py-3 px-4 rounded-none bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 dark:hover:bg-neutral-200 transition shadow cursor-pointer flex items-center justify-center space-x-2"
               >
-                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
                 <span>Retry Google Sign-In</span>
               </button>
 
@@ -139,7 +132,6 @@ export default function GoogleAuthCallbackPage({ onAuthSuccess }) {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { submitContactInquiry } from '../services/api';
 import SymbioteButton from '../components/SymbioteButton';
 
@@ -6,18 +6,42 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', orderNumber: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [siteSettings, setSiteSettings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('foolisharc_site_settings') || '{}'); }
+    catch { return {}; }
+  });
+
+  const configuredPhone = String(siteSettings.phone || '').replace(/\D/g, '');
+  const hasConfiguredPhone = configuredPhone.length >= 10;
+
+  useEffect(() => {
+    const syncSettings = () => {
+      try { setSiteSettings(JSON.parse(localStorage.getItem('foolisharc_site_settings') || '{}')); }
+      catch { setSiteSettings({}); }
+    };
+    window.addEventListener('storage', syncSettings);
+    return () => window.removeEventListener('storage', syncSettings);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.email && formData.message) {
       setLoading(true);
-      await submitContactInquiry(formData);
-      setLoading(false);
-      setSubmitted(true);
-      setTimeout(() => {
-        setFormData({ name: '', email: '', orderNumber: '', message: '' });
-        setSubmitted(false);
-      }, 4000);
+      setSubmitError('');
+      try {
+        const result = await submitContactInquiry(formData);
+        if (!result?.success) throw new Error(result?.error || 'Your message could not be saved. Please try again.');
+        setSubmitted(true);
+        setTimeout(() => {
+          setFormData({ name: '', email: '', orderNumber: '', message: '' });
+          setSubmitted(false);
+        }, 4000);
+      } catch (error) {
+        setSubmitError(error?.message || 'Your message could not be saved. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -34,7 +58,7 @@ export default function ContactPage() {
             How May We Assist You?
           </h1>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 font-light leading-relaxed">
-            Our atelier concierge in Lahore is available for bespoke inquiries, styling guidance, and order support.
+            Send our team a message about your order, sizing, or a product. We will reply using the email address you provide.
           </p>
         </div>
 
@@ -46,41 +70,49 @@ export default function ContactPage() {
             
             {/* Atelier Card */}
             <div className="p-7 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] space-y-3 shadow-2xs">
-              <h3 className="font-serif text-lg font-bold text-[#1C1612] dark:text-white">Lahore Atelier & Showroom</h3>
+              <h3 className="font-serif text-lg font-bold text-[#1C1612] dark:text-white">FOOLISH ARC Customer Care</h3>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 font-light leading-relaxed">
-                Plot 14-B, MM Alam Road, Gulberg III, Lahore, Pakistan
+                {siteSettings.location || 'Online customer support'}
               </p>
               <div className="pt-2 text-xs font-mono space-y-1 text-neutral-700 dark:text-neutral-300">
-                <p>Mon – Sat: 11:00 AM – 9:00 PM PKT</p>
-                <p>Sunday: By Private Appointment</p>
+                <p>{siteSettings.hours || 'Send us a message and we will get back to you.'}</p>
+                <p></p>
               </div>
             </div>
 
-            {/* Quick Contact Methods */}
+            {/* Contact methods appear only when the owner has configured real details. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <a
-                href="https://wa.me/923001234567"
-                target="_blank"
-                rel="noreferrer"
-                className="p-5 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] hover:border-[#9A6E3E] transition block group shadow-2xs"
-              >
-                <div className="flex items-center space-x-2 text-[#9A6E3E] mb-1">
-                  <span className="font-bold text-xs uppercase tracking-wider">WhatsApp</span>
+              {hasConfiguredPhone && (
+                <a
+                  href={`https://wa.me/${configuredPhone}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-5 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] hover:border-[#9A6E3E] transition block group shadow-2xs"
+                >
+                  <div className="flex items-center space-x-2 text-[#9A6E3E] mb-1">
+                    <span className="font-bold text-xs uppercase tracking-wider">WhatsApp</span>
+                  </div>
+                  <p className="text-xs font-mono text-neutral-900 dark:text-white font-bold">{siteSettings.phone}</p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">Customer assistance</p>
+                </a>
+              )}
+              {siteSettings.email && (
+                <a
+                  href={`mailto:${siteSettings.email}`}
+                  className="p-5 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] hover:border-[#9A6E3E] transition block group shadow-2xs"
+                >
+                  <div className="flex items-center space-x-2 text-[#9A6E3E] mb-1">
+                    <span className="font-bold text-xs uppercase tracking-wider">Email Concierge</span>
+                  </div>
+                  <p className="text-xs font-mono text-neutral-900 dark:text-white font-bold break-all">{siteSettings.email}</p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">Customer assistance</p>
+                </a>
+              )}
+              {!hasConfiguredPhone && !siteSettings.email && (
+                <div className="sm:col-span-2 rounded-2xl border border-[#E8E0D5] dark:border-[#2C241D] bg-white dark:bg-[#1A1613] p-5 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  Use the inquiry form and our team will reply to the email address you provide.
                 </div>
-                <p className="text-xs font-mono text-neutral-900 dark:text-white font-bold">+92 300 1234567</p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">Instant stylist assistance</p>
-              </a>
-
-              <a
-                href="mailto:concierge@foolisharc.com"
-                className="p-5 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] hover:border-[#9A6E3E] transition block group shadow-2xs"
-              >
-                <div className="flex items-center space-x-2 text-[#9A6E3E] mb-1">
-                  <span className="font-bold text-xs uppercase tracking-wider">Email Concierge</span>
-                </div>
-                <p className="text-xs font-mono text-neutral-900 dark:text-white font-bold">atelier@foolisharc.com</p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">Replies within 4 business hours</p>
-              </a>
+              )}
             </div>
 
           </div>
@@ -90,7 +122,7 @@ export default function ContactPage() {
             <div className="p-8 sm:p-10 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] shadow-2xs">
               <h3 className="font-serif text-xl font-bold mb-1 text-[#1C1612] dark:text-white">Send an Inquiry</h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6">
-                Direct inquiry to our Lahore studio concierge.
+                Your message is saved securely for the store team.
               </p>
 
               {submitted ? (
@@ -142,7 +174,7 @@ export default function ContactPage() {
                       type="text"
                       value={formData.orderNumber}
                       onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                      placeholder="e.g. TCS-99482104-LHE"
+                      placeholder="e.g. FA-ORDER-REFERENCE"
                       className="w-full px-4 py-3 rounded-xl bg-[#FAF9F6] dark:bg-[#201A16] border border-[#D8CEBF] dark:border-[#382F26] text-xs font-mono font-medium text-black dark:text-white focus:outline-none focus:border-[#9A6E3E] transition"
                     />
                   </div>
@@ -160,6 +192,12 @@ export default function ContactPage() {
                       className="w-full px-4 py-3 rounded-xl bg-[#FAF9F6] dark:bg-[#201A16] border border-[#D8CEBF] dark:border-[#382F26] text-xs font-medium text-black dark:text-white focus:outline-none focus:border-[#9A6E3E] transition resize-none"
                     />
                   </div>
+
+                  {submitError && (
+                    <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                      {submitError}
+                    </p>
+                  )}
 
                   <SymbioteButton
                     type="submit"

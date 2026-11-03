@@ -3,88 +3,60 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-/**
- * ============================================================================
- * 🌿 ZAYTOUN ATELIER - MONGODB CONNECTION CONFIGURATION
- * ============================================================================
- * You can paste your MongoDB connection link in either of TWO places:
- * 
- * OPTION 1 (Easiest):
- *   Paste your MongoDB URI directly into the quotes below:
- *   const MONGODB_LINK = "mongodb+srv://<username>:<password>@cluster0.mongodb.net/zaytoun?retryWrites=true&w=majority";
- * 
- * OPTION 2 (Environment file):
- *   Paste it into the `.env` file in your root folder:
- *   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0...
- * ============================================================================
- */
+let connectionPromise = null;
 
-// >>>>> PASTE YOUR MONGODB LINK BETWEEN THE QUOTES BELOW (OR IN .env) <<<<<
-const MONGODB_LINK = "mongodb+srv://ShahrozMubarak:shahzor0101@cluster1.pagfciy.mongodb.net/"; 
+mongoose.connection.on('disconnected', () => {
+  connectionPromise = null;
+});
 
-export const getMongoURI = () => {
-  return (
-    (MONGODB_LINK && MONGODB_LINK.trim() !== "" ? MONGODB_LINK.trim() : null) ||
-    process.env.MONGODB_URI ||
-    ""
-  );
-};
+export function getMongoURI() {
+  return (process.env.MONGODB_URI || '').trim();
+}
 
-let cachedPromise = null;
-
-export const connectDB = async (retries = 2) => {
-  if (mongoose.connection.readyState === 1) {
-    return true;
-  }
+export async function connectDB(retries = 2) {
+  if (mongoose.connection.readyState === 1) return true;
 
   const uri = getMongoURI();
-
-  if (!uri || uri === "PASTE_YOUR_MONGODB_URI_HERE" || uri.includes("<password>")) {
-    console.warn("⚠️  [MongoDB] No connection link found yet.");
-    console.warn("👉  Please configure MONGODB_URI in your Vercel Environment Variables or `.env`.");
+  if (!uri) {
+    console.warn('[database] MONGODB_URI is not configured.');
     return false;
   }
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
+  if (connectionPromise) {
     try {
-      if (cachedPromise) {
-        await cachedPromise;
-        if (mongoose.connection.readyState === 1) {
-          return true;
-        }
-      }
+      await connectionPromise;
+      return mongoose.connection.readyState === 1;
     } catch {
-      cachedPromise = null;
+      connectionPromise = null;
     }
+  }
 
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
     try {
-      console.log(`🔄  [MongoDB] Connecting to cluster (attempt ${attempt}/${retries})...`);
-      cachedPromise = mongoose.connect(uri, {
-        dbName: 'zaytoun_atelier',
+      connectionPromise = mongoose.connect(uri, {
+        dbName: process.env.MONGODB_DB_NAME || 'zaytoun_atelier',
         serverSelectionTimeoutMS: 7000,
         connectTimeoutMS: 10000,
         maxPoolSize: 10,
-        bufferCommands: true
+        minPoolSize: 0
       });
-      await cachedPromise;
-      if (mongoose.connection.readyState === 1) {
-        console.log("✅  [MongoDB] Connected successfully to MongoDB Atlas database: zaytoun_atelier");
-        return true;
-      }
+      await connectionPromise;
+      console.info('[database] Connected to MongoDB.');
+      return true;
     } catch (error) {
-      cachedPromise = null;
-      console.error(`❌  [MongoDB] Connection error (attempt ${attempt}):`, error.message);
+      connectionPromise = null;
+      console.error(`[database] Connection attempt ${attempt} failed: ${error.message}`);
       if (attempt < retries) {
-        await new Promise(res => setTimeout(res, 500));
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
       }
     }
   }
 
   return mongoose.connection.readyState === 1;
-};
+}
 
-export const isDBConnected = () => {
+export function isDBConnected() {
   return mongoose.connection.readyState === 1;
-};
+}
 
 export default connectDB;

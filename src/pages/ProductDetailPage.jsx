@@ -1,3 +1,5 @@
+import { recommendProductSize } from '../engine/fitFinderEngine';
+import FitFinderModal from '../components/FitFinderModal';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
@@ -17,8 +19,12 @@ export default function ProductDetailPage({
   onAddToCart,
   onToggleWishlist,
   wishlist = [],
-  onOpenProductModal
+  onOpenProductModal,
+  fitProfile = null,
+  onSaveFitProfile,
+  onDeleteFitProfile
 }) {
+  const [isLocalFitOpen, setIsLocalFitOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
@@ -43,7 +49,12 @@ export default function ProductDetailPage({
       const firstColor = product.colors?.[0];
       const initialColor = typeof firstColor === 'string' ? firstColor : (firstColor?.name || product.primaryColor || "");
       setSelectedColor(initialColor);
-      setSelectedSize(product.sizes?.[0] || "M");
+      const rec = fitProfile ? recommendProductSize(fitProfile, product) : null;
+      if (rec?.recommendedSize && product.sizes?.includes(rec.recommendedSize)) {
+        setSelectedSize(rec.recommendedSize);
+      } else {
+        setSelectedSize(product.sizes?.[0] || "M");
+      }
       setQuantity(1);
     }
   }, [id, product]);
@@ -82,7 +93,7 @@ export default function ProductDetailPage({
   const isWishlisted = wishlist.includes(product.id);
   const currentStock = product.stockPerSize?.[selectedSize] !== undefined
     ? Number(product.stockPerSize[selectedSize])
-    : (product.stock !== undefined ? Number(product.stock) : 8);
+    : Number(product.stock || 0);
 
   const handleAddToCart = () => {
     if (onAddToCart) {
@@ -241,21 +252,62 @@ export default function ProductDetailPage({
                 </span>
               </div>
 
-              <div className="grid grid-cols-5 gap-2.5">
-                {sizes.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedSize(s)}
-                    className={`h-12 rounded-xl text-xs font-mono font-black border transition-all active:scale-95 flex items-center justify-center shadow-xs ${
-                      selectedSize === s
-                        ? 'bg-[#1C1612] dark:bg-white text-white dark:text-black border-[#1C1612] dark:border-white shadow-sm ring-2 ring-[#9A6E3E]/30'
-                        : 'bg-white dark:bg-[#1A1613] text-neutral-800 dark:text-neutral-200 border-[#D8CEBF] dark:border-[#382F26] hover:border-[#9A6E3E]'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+              {(() => {
+                const rec = fitProfile ? recommendProductSize(fitProfile, product) : null;
+                const recSize = rec?.recommendedSize;
+                return (
+                  <>
+                    <div className="grid grid-cols-5 gap-2.5 pt-2">
+                      {sizes.map((s) => {
+                        const isRec = recSize === s;
+                        return (
+                          <div key={s} className="relative">
+                            {isRec && (
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-[#C69F6F] text-[#141413] text-[9px] font-bold tracking-tight z-10 shadow-2xs">
+                                Recommended for you
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSize(s)}
+                              className={`w-full h-12 rounded-xl text-xs font-mono font-black border transition-all active:scale-95 flex items-center justify-center shadow-xs ${
+                                selectedSize === s
+                                  ? 'bg-[#1C1612] dark:bg-white text-white dark:text-black border-[#1C1612] dark:border-white shadow-sm ring-2 ring-[#9A6E3E]/30'
+                                  : isRec
+                                  ? 'bg-[#FAF8F5] text-[#141413] border-[#C69F6F]'
+                                  : 'bg-white dark:bg-[#1A1613] text-neutral-800 dark:text-neutral-200 border-[#D8CEBF] dark:border-[#382F26] hover:border-[#9A6E3E]'
+                              }`}
+                            >
+                              {s}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FAF8F5] border border-[#E5D3BD] text-xs">
+                      <span className="text-[#141413] font-medium">
+                        {recSize ? `Your fit profile recommends Size ${recSize} (${rec.confidence})` : 'Unsure which cut fits best?'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsLocalFitOpen(true)}
+                        className="font-bold underline text-[#9A6E3E] hover:text-[#141413] cursor-pointer"
+                      >
+                        Find my size
+                      </button>
+                    </div>
+                    <FitFinderModal
+                      isOpen={isLocalFitOpen}
+                      onClose={() => setIsLocalFitOpen(false)}
+                      product={product}
+                      fitProfile={fitProfile}
+                      onSaveProfile={onSaveFitProfile}
+                      onDeleteProfile={onDeleteFitProfile}
+                      onSelectSize={(sz) => setSelectedSize(sz)}
+                    />
+                  </>
+                );
+              })()}
             </div>
 
             {/* Quantity Selector & Add To Bag Buttons */}
@@ -274,7 +326,7 @@ export default function ProductDetailPage({
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity(quantity + 1)}
+                    disabled={quantity>=Math.min(20,currentStock)} onClick={()=>setQuantity(q=>Math.min(q+1,20,currentStock))}
                     className="w-10 h-full flex items-center justify-center text-sm font-black hover:bg-neutral-100 dark:hover:bg-[#251E18] transition"
                   >
                     +
@@ -335,7 +387,7 @@ export default function ProductDetailPage({
             {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#E8E0D5] dark:border-[#332A22] text-xs font-mono">
               <div className="p-3.5 bg-[#FAF6F0] dark:bg-[#1E1915] border border-[#E8E0D5] dark:border-[#332A22] rounded-2xl shadow-2xs">
-                <p className="font-black uppercase text-xs text-[#1C1612] dark:text-white">TCS EXPRESS DELIVERY</p>
+                <p className="font-black uppercase text-xs text-[#1C1612] dark:text-white">TRACKED DELIVERY</p>
                 <p className="text-xs font-bold uppercase text-[#9A6E3E] mt-1">2-3 DAYS NATIONWIDE</p>
               </div>
               <div className="p-3.5 bg-[#FAF6F0] dark:bg-[#1E1915] border border-[#E8E0D5] dark:border-[#332A22] rounded-2xl shadow-2xs">

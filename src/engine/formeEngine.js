@@ -18,7 +18,12 @@ export const esc = (v) =>
     "'": '&#39;'
   }[c]));
 
-export const hex = (v) => /^#[0-9a-f]{6}$/i.test(v);
+export const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+function validAsset(a) {
+  return a && typeof a.src === 'string' && a.src.length <= 3500000 &&
+    /^(?:data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+|\/images\/[a-zA-Z0-9_./-]+\.(?:png|webp|jpe?g))$/i.test(a.src) &&
+    ['x','y','width','height'].every(k=>Number.isFinite(a[k]) && a[k]>=-200 && a[k]<=900) && a.width>0 && a.height>0;
+}
 
 export const money = (v) => 'Rs. ' + Math.round(Number(v) || 0).toLocaleString('en-US');
 
@@ -75,21 +80,7 @@ export function validateCatalog(data) {
       colors
     };
     if (p.style === 'custom') {
-      if (
-        !p.asset ||
-        typeof p.asset.src !== 'string' ||
-        p.asset.src.length > 3500000
-      ) {
-        throw new Error('Custom garments need a PNG or WebP image embedded.');
-      }
-      for (const k of ['x', 'y', 'width', 'height']) {
-        if (!Number.isFinite(p.asset[k]) || p.asset[k] < -200 || p.asset[k] > 900) {
-          throw new Error('Invalid garment placement.');
-        }
-      }
-      if (p.asset.width < 1 || p.asset.height < 1) {
-        throw new Error('Garment dimensions must be positive.');
-      }
+      if(!validAsset(p.asset)) throw new Error('Invalid garment image or placement.');
       result.asset = { ...p.asset };
     } else if (!STYLES[p.slot].includes(p.style)) {
       throw new Error('The preview shape does not match the category.');
@@ -138,11 +129,12 @@ export function defs(id, color) {
 }
 
 export function garment(p, variant = 0, person = p.person) {
-  if (p.style === 'custom' && p.asset) {
+  if (p.style === 'custom' && validAsset(p.asset)) {
     return `<image href="${esc(p.asset.src)}" x="${p.asset.x}" y="${p.asset.y}" width="${p.asset.width}" height="${p.asset.height}" preserveAspectRatio="none"/>`;
   }
   const id = 'garment-' + (++serial);
-  const color = (p.colors[variant] || p.colors[0] || { hex: '#364634' }).hex;
+  const candidate=(p.colors?.[variant] || p.colors?.[0])?.hex;
+  const color=hex(candidate) ? candidate : '#364634';
   const fill = `url(#${id})`;
   const line = tint(color, -34);
   const shine = tint(color, 22);
@@ -273,7 +265,7 @@ export function thumb(p, variant = 0) {
   }[p.slot] || '90 115 220 210';
 
   if (p.style === 'shorts') box = '125 270 150 160';
-  if (p.style === 'custom' && p.asset) {
+  if (p.style === 'custom' && validAsset(p.asset)) {
     box = `${p.asset.x - 10} ${p.asset.y - 10} ${p.asset.width + 20} ${p.asset.height + 20}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" aria-hidden="true">${garment(p, variant, p.person || 'women')}</svg>`;

@@ -1,20 +1,44 @@
 /**
- * 🌐 Google Identity & Authentication Service for Zaytoun Atelier
- * Exclusively supports official Google Identity Services (GIS) Token Client popup flow
- * and Google OAuth 2.0 account authentication.
- * No alternate or unverified logins are allowed.
+ * 🌐 Google Identity & Authentication Service for FOOLISH ARC
+ * Supports official Google Identity Services (GIS) popup login AND
+ * OAuth 2.0 Authorization Code + PKCE redirect flow (replacing legacy implicit token flow).
  */
 
 export const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo";
 
 export function getGoogleClientId() {
-  return import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+  try {
+    return import.meta?.env?.VITE_GOOGLE_CLIENT_ID || "";
+  } catch {
+    return "";
+  }
+}
+
+function base64UrlEncode(bytes) {
+  let binary = "";
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (let i = 0; i < arr.byteLength; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  const b64 = typeof btoa === "function"
+    ? btoa(binary)
+    : Buffer.from(arr).toString("base64");
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Generates a cryptographic OAuth 2.0 PKCE code_verifier and S256 code_challenge.
+ */
+export async function generatePkcePair() {
+  if (!globalThis.crypto?.subtle) throw new Error('Use HTTPS to sign in with Google.');
+  const codeVerifier=base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(codeVerifier));
+  return {codeVerifier,codeChallenge:base64UrlEncode(new Uint8Array(digest)),codeChallengeMethod:'S256'};
 }
 
 /**
  * Modern Google Identity Services (GIS) popup login.
- * Avoids full-page redirects and deprecated implicit flow URL hash parameters.
  */
 export function launchGooglePopupLogin(options = {}) {
   const normalized = typeof options === 'function' ? { onSuccess: options } : (options || {});
@@ -26,7 +50,6 @@ export function launchGooglePopupLogin(options = {}) {
     return;
   }
 
-  // Ensure GIS library is available on window
   if (typeof window !== "undefined" && window.google?.accounts?.oauth2) {
     try {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -35,7 +58,6 @@ export function launchGooglePopupLogin(options = {}) {
           "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid",
         callback: async (tokenResponse) => {
           if (tokenResponse.error) {
-            console.warn("Google OAuth popup response error:", tokenResponse);
             if (onError) {
               onError(
                 new Error(
@@ -51,12 +73,10 @@ export function launchGooglePopupLogin(options = {}) {
             const verified = await fetchGoogleVerifiedUser(tokenResponse.access_token);
             if (onSuccess) onSuccess(verified);
           } catch (fetchErr) {
-            console.warn("Error fetching Google user profile:", fetchErr);
             if (onError) onError(fetchErr);
           }
         },
         error_callback: (err) => {
-          console.warn("Google GIS popup error:", err);
           if (onError) {
             onError(
               new Error(
@@ -71,13 +91,11 @@ export function launchGooglePopupLogin(options = {}) {
       tokenClient.requestAccessToken({ prompt: "select_account" });
       return;
     } catch (e) {
-      console.warn("GIS token client initialization failed:", e);
       if (onError) onError(e);
       return;
     }
   }
 
-  // If GIS script hasn't finished loading yet
   if (onError) {
     onError(
       new Error(
@@ -88,10 +106,9 @@ export function launchGooglePopupLogin(options = {}) {
 }
 
 /**
- * Initiates the redirect to Google's accounts.google.com login screen.
- * @param {Object} options - { pendingItem, returnUrl }
+ * Initiates OAuth 2.0 Authorization Code + PKCE redirect to accounts.google.com.
  */
-export function redirectToGoogleLogin({ pendingItem = null, returnUrl = window.location.pathname } = {}) {
+export async function redirectToGoogleLogin({ pendingItem = null, returnUrl = window.location.pathname } = {}) {
   const clientId = getGoogleClientId();
 
   if (pendingItem) {
@@ -106,38 +123,76 @@ export function redirectToGoogleLogin({ pendingItem = null, returnUrl = window.l
     throw new Error("MISSING_CLIENT_ID");
   }
 
+  const { codeVerifier, codeChallenge, codeChallengeMethod } = await generatePkcePair();
+  const stateNonce = base64UrlEncode(
+    crypto.getRandomValues(new Uint8Array(32))
+  );
+  sessionStorage.setItem('foolisharc_pkce_verifier', codeVerifier);
+  sessionStorage.setItem('foolisharc_oauth_state', stateNonce);
+
   const redirectUri = `${window.location.origin}/auth/google/callback`;
-  const state = encodeURIComponent(JSON.stringify({ returnUrl, timestamp: Date.now() }));
+  const state = stateNonce;
 
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
-    response_type: "token",
+    response_type: "code",
+    code_challenge: codeChallenge,
+    code_challenge_method: codeChallengeMethod,
     scope: "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid",
     prompt: "select_account",
-    state: state
+    state
   });
 
-  const fullUrl = `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
-  window.location.href = fullUrl;
+  window.location.href = `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
 }
 
 /**
- * Parses URL hash returned by Google after redirection
+ * Parses URL query (?code=...) or legacy hash returned after OAuth redirect.
  */
-export function parseGoogleHash(hash) {
-  if (!hash) return {};
+export function parseGoogleCallbackParams(search = "", hash = "") {
+  const queryParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const cleanHash = hash.startsWith('#') ? hash.substring(1) : hash;
-  const params = new URLSearchParams(cleanHash);
+  const hashParams = new URLSearchParams(cleanHash);
+
   return {
-    accessToken: params.get('access_token'),
-    idToken: params.get('id_token'),
-    tokenType: params.get('token_type'),
-    expiresIn: params.get('expires_in'),
-    error: params.get('error'),
-    errorDescription: params.get('error_description'),
-    state: params.get('state')
+    code: queryParams.get('code'),
+    accessToken: hashParams.get('access_token') || queryParams.get('access_token'),
+    idToken: hashParams.get('id_token'),
+    tokenType: hashParams.get('token_type'),
+    expiresIn: hashParams.get('expires_in'),
+    error: queryParams.get('error') || hashParams.get('error'),
+    errorDescription: queryParams.get('error_description') || hashParams.get('error_description'),
+    state: queryParams.get('state') || hashParams.get('state')
   };
+}
+
+export function parseGoogleHash(hash) {
+  return parseGoogleCallbackParams("", hash);
+}
+
+/**
+ * Exchanges an Authorization Code + PKCE code_verifier via the backend.
+ */
+export async function exchangeGoogleAuthCode(code) {
+  const codeVerifier = sessionStorage.getItem('foolisharc_pkce_verifier') || '';
+  const redirectUri = `${window.location.origin}/auth/google/callback`;
+
+  const response = await fetch('/api/auth/google-code', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({ code, codeVerifier, redirectUri })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.user) {
+    throw new Error(data.error || 'Failed to exchange Google authorization code.');
+  }
+  sessionStorage.removeItem('foolisharc_pkce_verifier');
+  return data.user;
 }
 
 /**
@@ -158,7 +213,7 @@ export async function fetchGoogleVerifiedUser(accessToken) {
   }
 
   const data = await res.json();
-  
+
   if (!data.email_verified && data.email_verified !== undefined) {
     throw new Error("Google account email is not verified by Google.");
   }
@@ -174,6 +229,7 @@ export async function fetchGoogleVerifiedUser(accessToken) {
     email: data.email.toLowerCase(),
     avatar: data.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name || data.email)}`,
     googleId: data.sub,
+    accessToken,
     email_verified: Boolean(data.email_verified),
     authProvider: 'google',
     verified: true,

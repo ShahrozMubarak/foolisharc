@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PRODUCTS, COLOR_PALETTE_INFO, CATALOG_VERSION } from './data/products';
 import * as FormeEngine from './engine/formeEngine';
@@ -15,26 +15,32 @@ import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
 import AutomatedOrderNoticeModal from './components/AutomatedOrderNoticeModal';
-import { requestSystemNotificationPermission, notifyOrderPlaced, notifyGazetteSubscribed } from './services/notificationService';
+import { notifyOrderPlaced, notifyGazetteSubscribed } from './services/notificationService';
 import ProductModal from './components/ProductModal';
 import BrandPaletteGuide from './components/BrandPaletteGuide';
 import SizeGuideModal from './components/SizeGuideModal';
+import FitFinderModal from './components/FitFinderModal';
 import FabricTextureModal from './components/FabricTextureModal';
 import SearchOverlay from './components/SearchOverlay';
 import BackToTop from './components/BackToTop';
 import GoogleAuthModal from './components/GoogleAuthModal';
 
 // Pages
-import HomePage from './pages/HomePage';
+const HomePage = lazy(() => import('./pages/HomePage'));
 import ShopPage from './pages/ShopPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
-import StudioPage from './pages/StudioPage';
-import OrderTrackingPage from './pages/OrderTrackingPage';
+const StudioPage = lazy(() => import('./pages/StudioPage'));
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
+const FittingRoomPage = lazy(() => import('./pages/FittingRoomPage'));
+function CartRoute({setOpen}) {
+  useEffect(()=>{setOpen(true);},[setOpen]);
+  return <Navigate to="/shop" replace/>;
+}
 export default function App() {
   // Theme Mode: 'light' | 'dark'
   const [theme, setTheme] = useState(() => {
@@ -90,30 +96,6 @@ export default function App() {
     }
   }, [themeConfig]);
 
-  // Request native system/browser notification permission on site open (NO in-house HTML popups)
-  useEffect(() => {
-    // Attempt real browser prompt immediately
-    requestSystemNotificationPermission();
-
-    // Attach single-fire listener on first user interaction for browsers requiring gesture
-    const handleFirstGesture = () => {
-      requestSystemNotificationPermission();
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('keydown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
-    };
-
-    window.addEventListener('click', handleFirstGesture, { passive: true });
-    window.addEventListener('keydown', handleFirstGesture, { passive: true });
-    window.addEventListener('touchstart', handleFirstGesture, { passive: true });
-
-    return () => {
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('keydown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
-    };
-  }, []);
-
   const handleToggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -145,22 +127,18 @@ export default function App() {
   // Sync initial state from MongoDB Atlas if available
   useEffect(() => {
     API.fetchProductsFromDB().then(dbProds => {
-      if (Array.isArray(dbProds) && dbProds.length > 0) {
-        setProducts(dbProds);
-      }
-    });
-
-    API.fetchOrdersFromDB().then(dbOrders => {
-      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-        setOrders(dbOrders);
-      }
-    });
+      if (Array.isArray(dbProds) && dbProds.length > 0) setProducts(dbProds);
+    }).catch(() => {});
 
     API.fetchThemeFromDB().then(dbTheme => {
-      if (dbTheme && dbTheme.brand) {
-        setThemeConfig(prev => ({ ...prev, ...dbTheme }));
+      if (dbTheme && dbTheme.brand) setThemeConfig(prev => ({ ...prev, ...dbTheme }));
+      if (dbTheme?.siteSettings) {
+        try {
+          localStorage.setItem('foolisharc_site_settings', JSON.stringify(dbTheme.siteSettings));
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
       }
-    });
+    }).catch(() => {});
   }, []);
 
   // Outfits state per mannequin collection (women, men, kids)
@@ -235,96 +213,18 @@ export default function App() {
     }
   }, [wishlist]);
 
-  // Orders state (for Studio & Order management)
-  const [orders, setOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('zaytoun_orders');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn("Orders storage error:", e);
-    }
+  // Order history is sourced from the database, not seeded or trusted from browser storage.
+  const [orders, setOrders] = useState([]);
 
-    return [
-      {
-        id: "ZYT-2026-9041",
-        customer: {
-          name: "Ayesha Malik",
-          email: "ayesha.malik@lahore.pk",
-          phone: "+92 300 8472910",
-          address: "18-C Gulberg III, Lahore, Punjab",
-          city: "Lahore"
-        },
-        items: [
-          { id: "forme-02", name: "Chunky Ribbed Wool Turtleneck", size: "M", price: 18500, quantity: 1 },
-          { id: "forme-03", name: "Pleated Wide-Leg Trouser", size: "M", price: 14800, quantity: 1 }
-        ],
-        total: 33300,
-        paymentMethod: "jazzcash",
-        status: "processing",
-        courier: "TCS Express",
-        trackingNumber: "TCS-99482104-LHE",
-        date: "2026-10-14T14:30:00Z"
-      },
-      {
-        id: "ZYT-2026-9040",
-        customer: {
-          name: "Hamza Tariq",
-          email: "hamza.tariq@gmail.com",
-          phone: "+92 321 4488921",
-          address: "House 42, Street 7, F-8/2, Islamabad",
-          city: "Islamabad"
-        },
-        items: [
-          { id: "forme-08", name: "Desert Camel Structured Trouser", size: "L", price: 14200, quantity: 1 }
-        ],
-        total: 14200,
-        paymentMethod: "cod",
-        status: "shipped",
-        courier: "Leopards Courier",
-        trackingNumber: "LEO-7729104-ISB",
-        date: "2026-10-13T09:15:00Z"
-      }
-    ];
-  });
-
+  const [currentUser, setCurrentUser] = useState(null);
   useEffect(() => {
     try {
-      localStorage.setItem('zaytoun_orders', JSON.stringify(orders));
-    } catch (e) {
-      console.warn("Orders storage error:", e);
-    }
-  }, [orders]);
-
-  // Client User State - Supports Google authentication and direct email/password login
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('zaytoun_client_user') || localStorage.getItem('foolisharc_user') || localStorage.getItem('zaytoun_user');
-      const parsed = saved ? JSON.parse(saved) : null;
-      if (
-        parsed &&
-        parsed.email
-      ) {
-        return parsed;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      if (currentUser && currentUser.email) {
-        localStorage.setItem('zaytoun_client_user', JSON.stringify(currentUser));
-        localStorage.setItem('foolisharc_user', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('zaytoun_client_user');
-        localStorage.removeItem('foolisharc_user');
-      }
-    } catch (e) {
-      console.warn("Client user storage error:", e);
-    }
-  }, [currentUser]);
+      for (const key of ['zaytoun_orders','zaytoun_client_user','foolisharc_user','zaytoun_user','foolisharc_fit_profile']) localStorage.removeItem(key);
+    } catch {}
+    let active=true;
+    API.fetchCustomerSession().then(user=>{if(active && user) setCurrentUser(current=>current || user);});
+    return ()=>{active=false;};
+  }, []);
 
   // Google Auth Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -357,23 +257,19 @@ export default function App() {
   };
 
   // On Sign In Success - Accepts verified Google users or direct credentials
-  const handleAuthSuccess = (authUser) => {
+  const handleAuthSuccess = (authUser, redirectItem = null) => {
     if (!authUser || !authUser.email) {
       console.warn("Blocked invalid login attempt:", authUser);
       return;
     }
 
-    setCurrentUser(authUser);
+    const { accessToken: _googleAccessToken, ...safeAuthUser } = authUser;
+    setCurrentUser(safeAuthUser);
     setIsAuthModalOpen(false);
 
-    // Sync client profile to MongoDB Atlas backend if available
-    if (API && API.syncGoogleClientToDB) {
-      API.syncGoogleClientToDB(authUser);
-    }
-
     // If an item was queued when clicking "Add to Cart":
-    if (authModalConfig.pendingItem) {
-      const item = authModalConfig.pendingItem;
+    if (redirectItem || authModalConfig.pendingItem) {
+      const item = redirectItem || authModalConfig.pendingItem;
       addToCartDirect(
         item.product || item,
         item.selectedSize || item.size || 'M',
@@ -400,12 +296,16 @@ export default function App() {
   };
 
   // Sign out handler
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await API.logoutCustomerSession(); }
+    catch { setToastNotification({ title: 'Still signed in', message: 'Sign-out failed. Please try again.' }); return; }
     setCurrentUser(null);
+    setFitProfile(null);
     try {
       localStorage.removeItem('zaytoun_client_user');
       sessionStorage.removeItem('zaytoun_admin_session');
       sessionStorage.removeItem('zaytoun_admin_jwt');
+      sessionStorage.removeItem('foolisharc_admin_token');
     } catch {}
     setToastNotification({
       title: "Signed Out",
@@ -422,6 +322,29 @@ export default function App() {
   const [isPaletteGuideOpen, setIsPaletteGuideOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isFabricModalOpen, setIsFabricModalOpen] = useState(false);
+  const [isFitProfileModalOpen, setIsFitProfileModalOpen] = useState(false);
+  const [fitProfile,setFitProfile]=useState(null);
+  useEffect(()=>{
+    let active=true;
+    setFitProfile(null);
+    API.fetchFitProfileFromAPI().then(profile=>{if(active) setFitProfile(profile);});
+    return ()=>{active=false;};
+  },[currentUser?.email]);
+  const handleSaveFitProfile=setFitProfile;
+  const handleDeleteFitProfile=()=>setFitProfile(null);
+
+  const handleSwitchCartItemSize = (itemId, oldSize, color, newSize) => {
+    setCart(prev => {
+      const sameColor = item => item.id === itemId && (item.selectedColor || item.colorName || item.primaryColor || 'Olive') === color;
+      const source = prev.find(item => sameColor(item) && item.selectedSize === oldSize);
+      if (!source || newSize === oldSize) return prev;
+      const target = prev.find(item => sameColor(item) && item.selectedSize === newSize);
+      const quantity = source.quantity + (target?.quantity || 0);
+      if (quantity > Math.min(20, source.stockPerSize?.[newSize] ?? source.stock ?? 0)) return prev;
+      return prev.filter(item => item !== target).map(item => item === source
+        ? { ...item, selectedSize: newSize, size: newSize, quantity } : item);
+    });
+  };
 
   // Automated notification handler for subscriptions
   const handleSubscriptionNotification = (email) => {
@@ -434,6 +357,8 @@ export default function App() {
 
   // Direct Cart Addition (Internal)
   const addToCartDirect = (product, size = 'M', color = null, quantity = 1) => {
+    if (!product?.id) return;
+    const safeQuantity = Math.min(20, Math.max(1, Number(quantity) || 1));
     const garmentColor = color || product.colors?.[0]?.name || product.primaryColor || 'Olive';
     setCart(prev => {
       const existing = prev.find(
@@ -442,7 +367,7 @@ export default function App() {
       if (existing) {
         return prev.map(item =>
           item.id === product.id && item.selectedSize === size && (item.selectedColor === garmentColor || !item.selectedColor)
-            ? { ...item, quantity: item.quantity + (quantity || 1) }
+            ? { ...item, quantity: Math.min(20, item.quantity + safeQuantity) }
             : item
         );
       }
@@ -452,27 +377,26 @@ export default function App() {
           ...product,
           selectedSize: size,
           selectedColor: garmentColor,
-          quantity: quantity || 1
+          quantity: safeQuantity
         }
       ];
     });
   };
 
-  // Gated Cart Handler: Requires Google Sign-In before anyone can add to cart or buy
+  // Guest-friendly bag: customers can curate items before signing in or entering checkout details.
   const handleAddToCart = (product, size = 'M', color = null, quantity = 1) => {
-   if (!currentUser) { setPendingCartItem({ product, size, color }); setIsAuthModalOpen(true); return; }
-
     addToCartDirect(product, size, color, quantity);
+    setSelectedProductModal(null);
     setIsCartOpen(true);
     return true;
   };
 
-  const handleUpdateQuantity = (itemId, size, delta) => {
+  const handleUpdateQuantity = (itemId, size, color, delta) => {
     setCart(prev => {
       return prev
         .map(item => {
-          if (item.id === itemId && item.selectedSize === size) {
-            const nextQty = item.quantity + delta;
+          if (item.id === itemId && item.selectedSize === size && (item.selectedColor || item.colorName || item.primaryColor || 'Olive') === color) {
+            const nextQty = Math.min(20, item.quantity + delta);
             return nextQty > 0 ? { ...item, quantity: nextQty } : null;
           }
           return item;
@@ -481,8 +405,8 @@ export default function App() {
     });
   };
 
-  const handleRemoveFromCart = (itemId, size) => {
-    setCart(prev => prev.filter(item => !(item.id === itemId && item.selectedSize === size)));
+  const handleRemoveFromCart = (itemId, size, color) => {
+    setCart(prev => prev.filter(item => !(item.id === itemId && item.selectedSize === size && (item.selectedColor || item.colorName || item.primaryColor || 'Olive') === color)));
   };
 
   const handleToggleWishlist = (productId) => {
@@ -558,28 +482,10 @@ export default function App() {
 
     if (lookItems.length === 0) return;
 
-    setCart(prev => {
-      let updatedCart = [...prev];
-      lookItems.forEach(item => {
-        const existingIdx = updatedCart.findIndex(
-          c => c.id === item.id && c.selectedSize === size
-        );
-        if (existingIdx >= 0) {
-          updatedCart[existingIdx] = {
-            ...updatedCart[existingIdx],
-            quantity: updatedCart[existingIdx].quantity + 1
-          };
-        } else {
-          updatedCart.push({
-            ...item,
-            selectedSize: size,
-            quantity: 1
-          });
-        }
-      });
-      return updatedCart;
-    });
-
+    for (const item of lookItems) {
+      const color=item.colors?.[personOutfit[item.slot]?.variant || 0];
+      addToCartDirect(item,size,typeof color === 'string' ? color : color?.name);
+    }
     setIsCartOpen(true);
   };
 
@@ -587,152 +493,116 @@ export default function App() {
     handleToggleEquip(product);
   };
 
-  // Order Handlers
+  // Checkout commits to MongoDB before the UI confirms or clears the bag.
   const handleConfirmOrder = async (orderData) => {
-    const orderNumber = orderData.orderNumber || orderData.id || `ARC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newOrder = {
-      ...orderData,
-      id: orderNumber,
-      orderNumber: orderNumber,
-      customer: orderData.customer,
-      items: orderData.items && orderData.items.length > 0 ? orderData.items : cart,
-      total: orderData.total,
-      pricing: orderData.pricing,
-      paymentMethod: orderData.paymentMethod,
-      paymentReceipt: orderData.paymentReceipt || null,
-      receiptFileName: orderData.receiptFileName || null,
-      receiptUploadedAt: orderData.receiptUploadedAt || null,
-      status: orderData.status || "pending",
-      courier: orderData.status === 'approved' ? "TCS Express" : "Assigned upon Studio Approval",
-      trackingNumber: orderData.trackingNumber || null,
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    };
+    const savedResponse = await API.saveOrderToDB(orderData);
+    const savedOrder = savedResponse?.orderNumber ? savedResponse : savedResponse?.order;
+    if (!savedOrder?.orderNumber) {
+      throw new Error('The order was not confirmed by the server. Your bag is still saved.');
+    }
 
-    // Save synchronously to local storage cache so it loads instantly in OrderTrackingPage & receipts
+    setOrders(prev => [savedOrder, ...prev.filter(order =>
+      String(order?.orderNumber || order?.id) !== String(savedOrder.orderNumber)
+    )]);
+
+    if (Array.isArray(savedResponse.inventory)) {
+      setProducts(prev => prev.map(product =>
+        savedResponse.inventory.find(item => item.id === product.id) || product
+      ));
+    }
+
     try {
-      const existing = JSON.parse(localStorage.getItem('zaytoun_orders') || '[]');
-      const filtered = existing.filter(o => o.orderNumber !== orderNumber && o.id !== orderNumber);
-      localStorage.setItem('zaytoun_orders', JSON.stringify([newOrder, ...filtered]));
-      window.dispatchEvent(new Event('storage'));
+      if (savedOrder.customer?.email) {
+        sessionStorage.setItem('foolisharc_tracking_email', savedOrder.customer.email);
+      }
     } catch {}
 
-    setOrders(prev => [newOrder, ...prev]);
     setCart([]);
     setIsCheckoutOpen(false);
-    setConfirmedOrder(newOrder);
+    setConfirmedOrder(savedOrder);
     setIsAutomatedOrderModalOpen(false);
-
-    // Real System/Browser Push Notification on Buy
-    notifyOrderPlaced(newOrder);
+    try { notifyOrderPlaced(savedOrder); } catch (error) { console.warn('Order notification could not be shown:', error.message); }
 
     setToastNotification({
-      title: `Order #${orderNumber} Submitted`,
-      message: `Order received! Status: Pending Studio Verification.`
+      title: `Order #${savedOrder.orderNumber} confirmed`,
+      message: 'Your order has been securely saved. We will contact you with updates.'
     });
 
-    // Save directly to MongoDB Atlas in background
-    try {
-      const savedDoc = await API.saveOrderToDB(newOrder);
-      if (savedDoc && savedDoc._id) {
-        console.log("✅ [MongoDB] Order and customer profile written to Atlas:", savedDoc.orderNumber);
-      } else if (savedDoc && savedDoc.error) {
-        console.warn("⚠️ [MongoDB] Order save notice:", savedDoc.error);
-      }
-    } catch (dbErr) {
-      console.warn("⚠️ [MongoDB] Order sync note:", dbErr.message);
-    }
-
-    // Deduct purchased quantities from product inventory
-    const purchasedItems = orderData.items && orderData.items.length > 0 ? orderData.items : cart;
-    setProducts(prevProducts => {
-      return prevProducts.map(p => {
-        const matchingPurchased = purchasedItems.filter(item => (item.id === p.id || item.product?.id === p.id));
-        if (matchingPurchased.length === 0) return p;
-
-        let newStock = Number(p.stock !== undefined ? p.stock : 12);
-        let newStockPerSize = p.stockPerSize ? { ...p.stockPerSize } : null;
-
-        matchingPurchased.forEach(item => {
-          const qty = Number(item.quantity || 1);
-          newStock = Math.max(0, newStock - qty);
-          const sz = item.selectedSize || item.size;
-          if (newStockPerSize && sz && newStockPerSize[sz] !== undefined) {
-            newStockPerSize[sz] = Math.max(0, Number(newStockPerSize[sz]) - qty);
-          }
-        });
-
-        const updatedProduct = {
-          ...p,
-          stock: newStock,
-          ...(newStockPerSize ? { stockPerSize: newStockPerSize } : {})
-        };
-        API.saveProductToDB(updatedProduct);
-        return updatedProduct;
-      });
-    });
+    return savedOrder;
   };
 
-  const handleUpdateOrderStatus = (orderId, newStatus) => {
+  const handleUpdateOrderStatus = (orderId, newStatus, serverResult = null) => {
     const cleanId = String(orderId || '').toLowerCase().trim();
     const normalizedStatus = String(newStatus || 'pending').toLowerCase().trim();
-    setOrders(prev =>
-      prev.map(ord => {
-        if (!ord) return ord;
-        const num = String(ord.orderNumber || '').toLowerCase().trim();
-        const id = String(ord.id || '').toLowerCase().trim();
-        const mongoId = String(ord._id || '').toLowerCase().trim();
-        if (num === cleanId || id === cleanId || mongoId === cleanId) {
-          return { ...ord, status: normalizedStatus };
-        }
-        return ord;
-      })
-    );
-    API.updateOrderStatusInDB(orderId, normalizedStatus);
-  };
+    const serverOrder = serverResult?.order;
 
-  // Product Inventory Handlers (for Studio)
-  const handleAddProduct = (newProd) => {
-    setProducts(prev => [newProd, ...prev]);
-    API.saveProductToDB(newProd);
-  };
+    setOrders(prev => prev.map(order => {
+      const orderKeys = [order?.orderNumber, order?.id, order?._id].map(value => String(value || '').toLowerCase());
+      return orderKeys.includes(cleanId) ? { ...order, ...(serverOrder || {}), status: normalizedStatus } : order;
+    }));
 
-  const handleUpdateProductStock = (id, stock) => {
-    setProducts(prev => {
-      const updated = prev.map(p => (p.id === id ? { ...p, stock: Number(stock) } : p));
-      const targetProd = updated.find(p => p.id === id);
-      if (targetProd) API.saveProductToDB(targetProd);
-      return updated;
-    });
-  };
-
-  const handleUpdateProductPrice = (id, price) => {
-    setProducts(prev => {
-      const updated = prev.map(p => (p.id === id ? { ...p, price: Number(price) } : p));
-      const targetProd = updated.find(p => p.id === id);
-      if (targetProd) API.saveProductToDB(targetProd);
-      return updated;
-    });
-  };
-
-  const handleDeleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    API.deleteProductFromDB(id);
-  };
-
-  const handleImportCatalog = (importedProducts) => {
-    if (Array.isArray(importedProducts) && importedProducts.length > 0) {
-      setProducts(importedProducts);
-      importedProducts.forEach(p => API.saveProductToDB(p));
+    if (Array.isArray(serverResult?.inventory)) {
+      setProducts(prev => prev.map(product =>
+        serverResult.inventory.find(item => item.id === product.id) || product
+      ));
     }
   };
 
-  const handleUpdateTheme = (newConfig) => {
-    setThemeConfig(prev => {
-      const updated = { ...prev, ...newConfig };
-      API.saveThemeToDB(updated);
-      return updated;
+  // Product and appearance changes are persisted first; failures are surfaced to the Studio.
+  const handleAddProduct = async (newProduct) => {
+    const saved = await API.saveProductToDB(newProduct);
+    setProducts(prev => [saved, ...prev.filter(product => product.id !== saved.id)]);
+    return saved;
+  };
+
+  const handleUpdateProductStock = async (id, size, stock) => {
+    const current = products.find(product => product.id === id);
+    if (!current) throw new Error('Product not found.');
+    const stockPerSize = {
+      ...(current.stockPerSize || {}),
+      [size]: Math.max(0, Number(stock) || 0)
+    };
+    const updated = {
+      ...current,
+      stockPerSize,
+      stock: Object.values(stockPerSize).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0)
+    };
+    const saved = await API.saveProductToDB(updated);
+    setProducts(prev => prev.map(product => product.id === id ? saved : product));
+    return saved;
+  };
+
+  const handleUpdateProductPrice = async (id, price) => {
+    const current = products.find(product => product.id === id);
+    if (!current) throw new Error('Product not found.');
+    const saved = await API.saveProductToDB({ ...current, price: Math.max(0, Number(price) || 0) });
+    setProducts(prev => prev.map(product => product.id === id ? saved : product));
+    return saved;
+  };
+
+  const handleDeleteProduct = async (id) => {
+    await API.deleteProductFromDB(id);
+    setProducts(prev => prev.filter(product => product.id !== id));
+  };
+
+  const handleImportCatalog = async (importedProducts) => {
+    if (!Array.isArray(importedProducts) || importedProducts.length === 0) return;
+    const savedProducts = [];
+    for (const product of importedProducts) {
+      savedProducts.push(await API.saveProductToDB(product));
+    }
+    setProducts(prev => {
+      const map = new Map(prev.map(product => [product.id, product]));
+      savedProducts.forEach(product => map.set(product.id, product));
+      return Array.from(map.values());
     });
+  };
+
+  const handleUpdateTheme = async (newConfig) => {
+    const updated = { ...themeConfig, ...newConfig };
+    const saved = await API.saveThemeToDB(updated);
+    setThemeConfig(prev => ({ ...prev, ...saved }));
+    return saved;
   };
 
   const cartTotalCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -758,11 +628,13 @@ export default function App() {
           user={currentUser}
           onOpenAuthModal={handleOpenAuthModal}
           onLogout={handleLogout}
+          fitProfile={fitProfile}
+          onOpenFitProfile={() => setIsFitProfileModalOpen(true)}
         />
 
         {/* Multi-Page Routes */}
         <main className="flex-1 w-full max-w-full overflow-x-hidden">
-          <Routes>
+          <Suspense fallback={<p role="status" className="p-8 text-center">Loading…</p>}><Routes>
             {/* Home / Preview Landing Page */}
             <Route
               path="/"
@@ -805,6 +677,9 @@ export default function App() {
                   onToggleWishlist={handleToggleWishlist}
                   wishlist={wishlist}
                   onOpenProductModal={(p) => setSelectedProductModal(p)}
+                  fitProfile={fitProfile}
+                  onSaveFitProfile={handleSaveFitProfile}
+                  onDeleteFitProfile={handleDeleteFitProfile}
                 />
               }
             />
@@ -817,6 +692,9 @@ export default function App() {
                   onToggleWishlist={handleToggleWishlist}
                   wishlist={wishlist}
                   onOpenProductModal={(p) => setSelectedProductModal(p)}
+                  fitProfile={fitProfile}
+                  onSaveFitProfile={handleSaveFitProfile}
+                  onDeleteFitProfile={handleDeleteFitProfile}
                 />
               }
             />
@@ -825,12 +703,15 @@ export default function App() {
             <Route
               path="/cart"
               element={
-                <Navigate to="/shop" replace />
+                <CartRoute setOpen={setIsCartOpen} />
               }
             />
 
             {/* Fitting Room Redirect */}
-            <Route path="/fitting-room" element={<Navigate to="/shop" replace />} />
+            <Route path="/fitting-room" element={<FittingRoomPage products={products} outfits={outfits} selectedPerson={selectedPerson}
+              onSelectPerson={setSelectedPerson} onToggleEquip={handleToggleEquip} onSelectVariant={handleSelectVariant}
+              onClearOutfit={handleClearOutfit} onResetOutfit={handleResetOutfit} onAddLookToBag={handleAddLookToBag}
+              onAddToCart={handleAddToCart} onOpenBrandGuide={()=>setIsPaletteGuideOpen(true)}/>} />
 
             {/* Lookbook Route */}
             <Route path="/lookbook" element={<Navigate to="/shop" replace />} />
@@ -905,7 +786,7 @@ export default function App() {
 
             {/* Catch-all route renders 404 Page Not Found */}
             <Route path="*" element={<NotFoundPage onOpenAuthModal={handleOpenAuthModal} />} />
-          </Routes>
+          </Routes></Suspense>
         </main>
 
         {/* Global Footer */}
@@ -924,10 +805,22 @@ export default function App() {
           onRemoveItem={handleRemoveFromCart}
           user={currentUser}
           onOpenAuthModal={handleOpenAuthModal}
+          fitProfile={fitProfile}
+          onSwitchItemSize={handleSwitchCartItemSize}
           onCheckout={() => {
             setIsCartOpen(false);
             setIsCheckoutOpen(true);
           }}
+        />
+
+        <FitFinderModal
+          isOpen={isFitProfileModalOpen}
+          onClose={() => setIsFitProfileModalOpen(false)}
+          product={products[0]}
+          fitProfile={fitProfile}
+          onSaveProfile={handleSaveFitProfile}
+          onDeleteProfile={handleDeleteFitProfile}
+          onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
         />
 
         {isCheckoutOpen && (
@@ -984,7 +877,7 @@ export default function App() {
           onClose={() => setIsFabricModalOpen(false)}
         />
 
-        {/* Google Authentication Modal (Required before purchase or adding to bag) */}
+        {/* Optional customer sign-in */}
         <GoogleAuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}

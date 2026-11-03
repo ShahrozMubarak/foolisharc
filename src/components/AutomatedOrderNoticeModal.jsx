@@ -12,7 +12,7 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
   if (!isOpen || !order) return null;
 
   const items = order.items || [];
-  const trackingNumber = order.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
+  const trackingNumber = order.trackingNumber || 'Assigned after studio approval';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn select-none">
@@ -31,7 +31,7 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
         <div className="flex items-center space-x-2">
           <span className="w-2.5 h-2.5 bg-emerald-600 rounded-none animate-ping" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
-            Automated Dispatch Confirmed
+            Order Received
           </span>
         </div>
 
@@ -51,10 +51,10 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
             Automated Message from Lahore Atelier:
           </p>
           <p className="text-xs sm:text-[13px] text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal">
-            Your order has been officially received and dispatched to our tailoring fulfillment center. Courier partner <strong className="text-black dark:text-white">TCS Express</strong> has been assigned tracking ID <span className="font-mono font-bold text-black dark:text-white">{trackingNumber}</span>.
+            Your order has been securely saved and is awaiting studio review. Courier details and a tracking reference will appear here after the order is approved and dispatched.
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 pt-1">
-            An automated receipt with tracking instructions has been transmitted to <span className="underline font-medium text-black dark:text-white">{order.customer?.email || 'your email'}</span>.
+            Your order details are saved. Check your order status using the order number and checkout email: <span className="underline font-medium text-black dark:text-white">{order.customer?.email || 'your email'}</span>.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
                     </div>
                   </div>
                   <span className="text-xs font-bold font-mono">
-                    {formatPrice(item.price * (item.quantity || 1))}
+                    {formatPrice(Number(item.lineTotal ?? ((item.unitPrice ?? item.price ?? 0) * (item.quantity || 1))))}
                   </span>
                 </div>
               );
@@ -98,12 +98,12 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
         {/* Financial & Delivery Details */}
         <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-onyx-800 space-y-1 text-xs">
           <div className="flex justify-between font-bold">
-            <span className="uppercase tracking-wider">Total Amount Paid:</span>
+            <span className="uppercase tracking-wider">Order Total:</span>
             <span className="font-mono text-sm">{formatPrice(order.total)}</span>
           </div>
           <div className="flex justify-between text-neutral-500 text-[11px]">
             <span>Delivery Method:</span>
-            <span>TCS Express (2-3 Business Days)</span>
+            <span>Courier partner (assigned after approval)</span>
           </div>
           {order.customer?.address && (
             <div className="flex justify-between text-neutral-500 text-[11px] pt-1">
@@ -116,7 +116,7 @@ export default function AutomatedOrderNoticeModal({ order, isOpen, onClose }) {
         {/* Modal Actions */}
         <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
           <Link
-            to={`/orders?id=${order.orderNumber || order.id}`}
+            to={`/track/${encodeURIComponent(order.orderNumber || order.id)}`}
             onClick={onClose}
             className="w-full sm:flex-1 py-3 text-center bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-xs font-bold uppercase tracking-wider rounded-none transition"
           >

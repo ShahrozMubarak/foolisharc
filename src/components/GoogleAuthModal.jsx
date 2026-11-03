@@ -28,25 +28,6 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const persistUserSession = (user) => {
-    localStorage.setItem('zaytoun_client_user', JSON.stringify(user));
-    localStorage.setItem('foolisharc_user', JSON.stringify(user));
-    localStorage.setItem('zaytoun_user', JSON.stringify(user));
-  };
-
-  const saveLocalCredentials = (userEmail, userPass) => {
-    if (!userEmail) return;
-    try {
-      const stored = JSON.parse(localStorage.getItem('foolisharc_credentials') || '{}');
-      if (userPass) {
-        stored[userEmail.toLowerCase().trim()] = userPass;
-      }
-      localStorage.setItem('foolisharc_credentials', JSON.stringify(stored));
-    } catch (e) {
-      console.warn("Credential caching note:", e);
-    }
-  };
-
   // Direct Email & Password Sign In
   const handleSignIn = async (e) => {
     e.preventDefault();
@@ -62,43 +43,10 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      // 1. Attempt server authentication against MongoDB Atlas
-      let authenticatedUser = null;
-      try {
-        const res = await loginWithEmailAndPassword({ email: cleanEmail, password });
-        if (res && res.success && res.user) {
-          authenticatedUser = res.user;
-        }
-      } catch (apiErr) {
-        // If server returned specific credential error, report it
-        if (apiErr.message && !apiErr.message.includes('fetch') && !apiErr.message.includes('network')) {
-          throw apiErr;
-        }
-      }
+      const result = await loginWithEmailAndPassword({ email: cleanEmail, password });
+      const authenticatedUser = result?.user;
+      if (!authenticatedUser) throw new Error('Invalid email or password.');
 
-      // 2. Fallback to local credential cache if offline or serverless cold start
-      if (!authenticatedUser) {
-        const stored = JSON.parse(localStorage.getItem('foolisharc_credentials') || '{}');
-        const localPass = stored[cleanEmail];
-        if (localPass && localPass === password) {
-          const namePart = cleanEmail.split('@')[0];
-          authenticatedUser = {
-            email: cleanEmail,
-            name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-            firstName: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-            authProvider: 'email',
-            verified: true,
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`
-          };
-        }
-      }
-
-      if (!authenticatedUser) {
-        throw new Error('Invalid email or password. Please verify your credentials or sign in with Google.');
-      }
-
-      saveLocalCredentials(cleanEmail, password);
-      persistUserSession(authenticatedUser);
 
       if (onSuccess) onSuccess(authenticatedUser);
       if (onClose) onClose();
@@ -123,11 +71,13 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           setPendingGoogleUser(googleUser);
           setEmail(cleanEmail);
 
-          // Synchronize profile with MongoDB Atlas
-          syncGoogleClientToDB(googleUser);
-
-          // Always prompt user with the setup popup to add/confirm email and password
-          setStep('set_password');
+          try {
+            await syncGoogleClientToDB(googleUser);
+            setStep('set_password');
+          } catch (syncError) {
+            setPendingGoogleUser(null);
+            setError(syncError?.message || 'Google account verification failed. Please try again.');
+          }
         },
         onError: (err) => {
           setLoading(false);
@@ -145,7 +95,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setError('');
 
-    const cleanEmail = (email || pendingGoogleUser?.email || '').toLowerCase().trim();
+    const cleanEmail = String(pendingGoogleUser?.email || '').toLowerCase().trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       setError('Please provide a valid email address.');
       return;
@@ -154,8 +104,8 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
       setError('Please enter a password.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters.');
       return;
     }
     if (password !== confirmPassword) {
@@ -166,32 +116,13 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      // 1. Save hashed credentials in MongoDB Atlas
-      await setPasswordInDB({
-        email: cleanEmail,
-        password: password,
-        name: pendingGoogleUser?.name || cleanEmail.split('@')[0],
-        avatar: pendingGoogleUser?.avatar,
-        googleId: pendingGoogleUser?.googleId
-      }).catch((dbErr) => {
-        console.warn("MongoDB password save note:", dbErr.message);
+      const result = await setPasswordInDB({
+        accessToken: pendingGoogleUser?.accessToken,
+        password
       });
+      const finalUser = result?.user;
+      if (!finalUser) throw new Error('The server could not complete password setup.');
 
-      // 2. Cache in local credentials
-      saveLocalCredentials(cleanEmail, password);
-
-      // 3. Complete authentication session
-      const finalUser = {
-        ...(pendingGoogleUser || {}),
-        email: cleanEmail,
-        name: pendingGoogleUser?.name || cleanEmail.split('@')[0],
-        firstName: pendingGoogleUser?.firstName || cleanEmail.split('@')[0],
-        authProvider: 'google_password',
-        googleVerified: true,
-        verified: true
-      };
-
-      persistUserSession(finalUser);
       setSuccessMsg('Credentials saved! You can now sign in using your email and password anytime.');
 
       setTimeout(() => {
@@ -208,15 +139,16 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
   // Skip Password Setup and continue with Google directly
   const handleSkipPassword = () => {
     if (!pendingGoogleUser) return;
-    const cleanEmail = (pendingGoogleUser.email || '').toLowerCase().trim();
+    const cleanEmail = String(pendingGoogleUser.email || '').toLowerCase().trim();
+    const { accessToken, ...safeGoogleUser } = pendingGoogleUser;
     const finalUser = {
-      ...pendingGoogleUser,
+      ...safeGoogleUser,
       email: cleanEmail,
       authProvider: 'google',
       googleVerified: true,
       verified: true
     };
-    persistUserSession(finalUser);
+
     if (onSuccess) onSuccess(finalUser);
     if (onClose) onClose();
   };
@@ -392,10 +324,10 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 12 characters"
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   required
-                  minLength={6}
+                  minLength={12}
                 />
               </div>
 
@@ -410,7 +342,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   placeholder="Re-enter password to confirm"
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   required
-                  minLength={6}
+                  minLength={12}
                 />
               </div>
 

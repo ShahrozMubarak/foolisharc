@@ -1,12 +1,12 @@
 /**
  * notificationService.js - Official System & Browser Push Notification Engine
- * Zaytoun Atelier Luxury Slow-Fashion Platform
+ * FOOLISH ARC Luxury Slow-Fashion Platform
  * 
  * Directly leverages the native browser Web Notification API and Service Worker
  * to prompt for SYSTEM permissions (not custom in-house HTML popups) and deliver
  * native desktop & mobile OS notifications for:
  * 1. Order Placed & Verification
- * 2. Order Approved & Courier TCS Tracking Activation
+ * 2. Order Approved & Courier Tracking Activation
  * 3. Consignment Dispatched & Status Updates
  * 4. Gazette & Private Atelier Drop Announcements
  */
@@ -135,11 +135,13 @@ export function notifyOrderPlaced(order) {
  */
 export function notifyOrderApproved(order) {
   const orderNum = order.orderNumber || order.id || 'NEW';
-  const trackingNum = order.trackingNumber || `TCS-${Math.floor(10000000 + Math.random() * 90000000)}-PK`;
+  const trackingNum = order.trackingNumber || '';
 
   return sendSystemNotification({
     title: `FOOLISH ARC • Order Approved #${orderNum}`,
-    body: `Your consignment is verified and approved. TCS Express Tracking #: ${trackingNum}.`,
+    body: trackingNum
+      ? `Your order is approved. ${order?.courier || 'Courier partner'} tracking reference: ${trackingNum}.`
+      : 'Your order is approved. Courier details will appear when dispatch is arranged.',
     tag: `order-approved-${orderNum}`,
     url: `/track/${orderNum}`
   });
@@ -158,7 +160,7 @@ export function notifyOrderStatusChange(orderNum, status) {
   const cleanStatus = (statusVal || 'pending').toLowerCase();
   let message = `Order #${orderId} status updated to ${cleanStatus}.`;
   if (cleanStatus === 'dispatched' || cleanStatus === 'shipped') {
-    message = `Order #${orderId} has been handed to TCS Express courier for priority delivery.`;
+    message = `Order #${orderId} has been handed to the assigned courier partner for priority delivery.`;
   } else if (cleanStatus === 'delivered') {
     message = `Order #${orderId} has been delivered. Thank you for choosing Foolish Arc slow fashion.`;
   } else if (cleanStatus === 'approved') {

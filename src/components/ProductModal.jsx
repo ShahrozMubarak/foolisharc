@@ -39,9 +39,10 @@ export default function ProductModal({
   const [fitPreference, setFitPreference] = useState('relaxed');
   const { formatPrice } = useCurrency();
 
-  const currentStock = product.stockPerSize?.[selectedSize] || 6;
+  const currentStock = Number(product?.stockPerSize?.[selectedSize] ?? product?.stock ?? 0);
 
   const handleAddToCart = () => {
+    if(currentStock<quantity) return;
     const result = onAddToCart(product, selectedSize, selectedColor, quantity);
     if (result !== false) {
       setIsAdded(true);
@@ -195,7 +196,7 @@ export default function ProductModal({
                     ? Number(product.stockPerSize[selectedSize])
                     : product.stock !== undefined
                       ? Number(product.stock)
-                      : 6;
+                      : 0;
 
                   return (
                     <div className="mt-2.5 flex items-center space-x-2 text-xs">
@@ -250,7 +251,7 @@ export default function ProductModal({
             <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-onyx-800">
               <div className="flex items-center space-x-2.5">
                 <SymbioteButton
-                  onClick={handleAddToCart}
+                  disabled={currentStock<quantity} onClick={handleAddToCart}
                   theme="camel"
                   containerClassName="flex-1"
                   className={`w-full py-3 px-4 rounded-xl font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all duration-300 shadow-md flex items-center justify-center space-x-2 active:scale-95 cursor-pointer ${
