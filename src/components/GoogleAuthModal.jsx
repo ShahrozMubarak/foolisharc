@@ -94,7 +94,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     } catch (err) {
       const errMsg = err?.message || 'Authentication failed. Please check your credentials.';
       if (errMsg.includes('Invalid email or password') && authMode === 'signin') {
-        setError('Invalid password. For owner account, use password "shahroz" or click "Reset / Set" to choose your own password.');
+        setError('Invalid email or password. If you forgot your password, click "Reset / Set" above to set a new password.');
       } else {
         setError(errMsg);
       }
@@ -312,7 +312,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Shahroz Mubarak"
+                    placeholder="e.g. Alexander Vance"
                     className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   />
                 </div>
@@ -347,16 +347,13 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               {authMode === 'signin' && (
-                <div className="flex justify-between items-center text-[11px] pt-0.5 text-stone-400">
-                  <span>
-                    Owner default: <code className="text-[#C69F6F] font-mono">shahroz</code>
-                  </span>
+                <div className="flex justify-end items-center text-[11px] pt-0.5 text-stone-400">
                   <button
                     type="button"
                     onClick={() => { setAuthMode('reset'); setError(''); }}
                     className="text-[#C69F6F] hover:underline cursor-pointer font-medium"
                   >
-                    Forgot / Set New?
+                    Forgot / Set New Password?
                   </button>
                 </div>
               )}

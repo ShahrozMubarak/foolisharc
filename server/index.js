@@ -490,9 +490,9 @@ app.post('/api/auth/client-signup', createRateLimiter({
       const hashedPassword = await bcrypt.hash(password, 12);
       existingUser = new User({
         email,
-        name: name || (isOwner ? 'Shahroz Mubarak (Owner)' : email.split('@')[0]),
-        firstName: name ? name.split(' ')[0] : (isOwner ? 'Shahroz' : email.split('@')[0]),
-        lastName: name ? name.split(' ').slice(1).join(' ') : (isOwner ? 'Mubarak' : ''),
+        name: name || (isOwner ? 'Atelier Owner' : email.split('@')[0]),
+        firstName: name ? name.split(' ')[0] : (isOwner ? 'Owner' : email.split('@')[0]),
+        lastName: name ? name.split(' ').slice(1).join(' ') : '',
         password: hashedPassword,
         role: isOwner ? 'owner' : 'customer',
         authProvider: 'email',
@@ -595,21 +595,16 @@ app.post('/api/auth/client-login', createRateLimiter({
     }
 
     if (!isPasswordValid) {
-      if (isOwner) {
-        return res.status(401).json({
-          error: 'Invalid password. Try password "shahroz", or click "Set / Reset Password" to set your chosen password.'
-        });
-      }
-      return res.status(401).json({ error: 'Invalid email or password. You can click "Set / Reset Password" below.' });
+      return res.status(401).json({ error: 'Invalid email or password. You can use "Reset / Set" to choose a new password.' });
     }
 
     // If owner logged in but didn't have user record in DB yet, create or update it
     if (!existingUser) {
       existingUser = new User({
         email,
-        name: 'Shahroz (Owner)',
-        firstName: 'Shahroz',
-        lastName: 'Mubarak',
+        name: 'Atelier Owner',
+        firstName: 'Owner',
+        lastName: '',
         role: 'owner',
         authProvider: 'email',
         verified: true,
@@ -702,9 +697,9 @@ app.post('/api/auth/reset-password', createRateLimiter({
     if (!user) {
       user = new User({
         email,
-        name: isOwner ? 'Shahroz (Owner)' : email.split('@')[0],
-        firstName: isOwner ? 'Shahroz' : email.split('@')[0],
-        lastName: isOwner ? 'Mubarak' : '',
+        name: isOwner ? 'Atelier Owner' : email.split('@')[0],
+        firstName: isOwner ? 'Owner' : email.split('@')[0],
+        lastName: '',
         password: hashedPassword,
         role: isOwner ? 'owner' : 'customer',
         authProvider: 'email',
