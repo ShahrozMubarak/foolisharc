@@ -82,21 +82,6 @@ export default function Navbar({
             </button>
           )}
 
-          {/* Header "My fit profile" Link (Placement #5) */}
-          {onOpenFitProfile && (
-            <button
-              type="button"
-              onClick={onOpenFitProfile}
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-[#C69F6F] bg-[#FAF8F5] text-[#141413] hover:bg-[#F2E9DE] transition cursor-pointer"
-              title="View, edit or delete your saved fit profile"
-            >
-              <span>My fit profile</span>
-              {fitProfile && (
-                <span className="w-2 h-2 rounded-full bg-[#9A6E3E]" />
-              )}
-            </button>
-          )}
-
           {/* Currency Switcher (Desktop/Tablet) */}
           <button
             onClick={() => {
@@ -197,13 +182,6 @@ export default function Navbar({
               )}
             </div>
           )}
-
-          <Link
-            to="/studio"
-            className="hidden sm:inline-flex items-center rounded-xl border border-[#D8CEBF] dark:border-[#382F26] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7A4B26] dark:text-[#E6D3B3] hover:border-[#9A6E3E] transition"
-          >
-            Owner Studio
-          </Link>
 
           {/* Shopping Bag Button with Symbiote Tether */}
           <SymbioteButton
@@ -312,14 +290,6 @@ export default function Navbar({
             className="block text-black dark:text-white py-1"
           >
             Track Order
-          </NavLink>
-
-          <NavLink
-            to="/studio"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#7A4B26] dark:text-[#E6D3B3] py-1"
-          >
-            Owner Studio
           </NavLink>
 
           {/* Mobile Currency & Lamp Theme Settings Row */}
