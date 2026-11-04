@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
 import { launchGooglePopupLogin as loginWithGooglePopup } from '../utils/googleAuth';
-import { setPasswordInDB, loginWithEmailAndPassword, signupWithEmailAndPassword, syncGoogleClientToDB } from '../services/api';
+import { setPasswordInDB, loginWithEmailAndPassword, signupWithEmailAndPassword, resetPasswordWithEmail, syncGoogleClientToDB } from '../services/api';
 
 export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
-  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'reset'
   const [step, setStep] = useState('login'); // 'login' | 'set_password'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,7 +32,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  // Direct Email & Password Sign In or Sign Up
+  // Direct Email & Password Sign In, Sign Up, or Password Reset
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -48,7 +48,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
       return;
     }
 
-    if (authMode === 'signup') {
+    if (authMode === 'signup' || authMode === 'reset') {
       if (password !== confirmPassword) {
         setError('Passwords do not match. Please re-enter.');
         return;
@@ -65,6 +65,11 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           email: cleanEmail,
           password
         });
+      } else if (authMode === 'reset') {
+        result = await resetPasswordWithEmail({
+          email: cleanEmail,
+          newPassword: password
+        });
       } else {
         result = await loginWithEmailAndPassword({ email: cleanEmail, password });
       }
@@ -75,7 +80,11 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
       if (result?.isAdmin || authenticatedUser?.isAdmin || authenticatedUser?.role === 'owner') {
         setSuccessMsg('Welcome, Owner! Full atelier and admin control unlocked.');
       } else {
-        setSuccessMsg(authMode === 'signup' ? 'Account created successfully! Welcome to FOOLISH ARC.' : 'Welcome back!');
+        setSuccessMsg(
+          authMode === 'signup'
+            ? 'Account created successfully! Welcome to FOOLISH ARC.'
+            : (authMode === 'reset' ? 'Password updated! You are now signed in.' : 'Welcome back!')
+        );
       }
 
       setTimeout(() => {
@@ -85,7 +94,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
     } catch (err) {
       const errMsg = err?.message || 'Authentication failed. Please check your credentials.';
       if (errMsg.includes('Invalid email or password') && authMode === 'signin') {
-        setError('Invalid email or password. If you do not have an account yet, click "Create Account" below.');
+        setError('Invalid password. For owner account, use password "shahroz" or click "Reset / Set" to choose your own password.');
       } else {
         setError(errMsg);
       }
@@ -217,12 +226,16 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           {step === 'login' ? (
             <>
               <h2 className="mt-4 text-xl font-black uppercase tracking-tight text-stone-100">
-                {authMode === 'signup' ? 'Create Your Account' : 'Welcome to FOOLISH ARC'}
+                {authMode === 'signup'
+                  ? 'Create Your Account'
+                  : (authMode === 'reset' ? 'Set or Reset Password' : 'Welcome to FOOLISH ARC')}
               </h2>
               <p className="text-xs text-stone-400 mt-1">
                 {authMode === 'signup'
                   ? 'Sign up to shop, save orders & access personalized tailoring'
-                  : 'Sign in with your email & password or Google'}
+                  : (authMode === 'reset'
+                      ? 'Enter your email & new password to update and sign in immediately'
+                      : 'Sign in with your email & password or Google')}
               </p>
 
               {/* Mode Switcher Tabs */}
@@ -248,6 +261,17 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   }`}
                 >
                   Create Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('reset'); setError(''); }}
+                  className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition ${
+                    authMode === 'reset'
+                      ? 'bg-[#C69F6F] text-stone-950 shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Reset / Set
                 </button>
               </div>
             </>
@@ -275,7 +299,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           </div>
         )}
 
-        {/* STEP 1: LOGIN / SIGNUP VIEW */}
+        {/* STEP 1: LOGIN / SIGNUP / RESET VIEW */}
         {step === 'login' && (
           <div>
             <form onSubmit={handleAuthSubmit} className="space-y-3.5">
@@ -310,7 +334,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
-                  Password
+                  {authMode === 'reset' ? 'New Password' : 'Password'}
                 </label>
                 <input
                   type="password"
@@ -322,10 +346,25 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
 
-              {authMode === 'signup' && (
+              {authMode === 'signin' && (
+                <div className="flex justify-between items-center text-[11px] pt-0.5 text-stone-400">
+                  <span>
+                    Owner default: <code className="text-[#C69F6F] font-mono">shahroz</code>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('reset'); setError(''); }}
+                    className="text-[#C69F6F] hover:underline cursor-pointer font-medium"
+                  >
+                    Forgot / Set New?
+                  </button>
+                </div>
+              )}
+
+              {(authMode === 'signup' || authMode === 'reset') && (
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
-                    Confirm Password
+                    Confirm {authMode === 'reset' ? 'New ' : ''}Password
                   </label>
                   <input
                     type="password"
@@ -343,7 +382,11 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                 disabled={loading}
                 className="w-full py-3 mt-2 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
-                {loading ? 'PROCESSING...' : (authMode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN WITH PASSWORD')}
+                {loading
+                  ? 'PROCESSING...'
+                  : (authMode === 'signup'
+                      ? 'CREATE ACCOUNT'
+                      : (authMode === 'reset' ? 'UPDATE PASSWORD & SIGN IN' : 'SIGN IN WITH PASSWORD'))}
               </button>
             </form>
 

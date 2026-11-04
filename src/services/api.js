@@ -157,6 +157,18 @@ export async function signupWithEmailAndPassword(credentials) {
   return data;
 }
 
+export async function resetPasswordWithEmail(credentials) {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(credentials)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Password update failed');
+  return data;
+}
+
 export async function updateAdminPassword(newPassword) {
   const res = await fetch(`${API_BASE}/admin/change-password`, {
     method: 'POST',

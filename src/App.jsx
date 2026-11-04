@@ -325,7 +325,7 @@ export default function App() {
   const [fitProfile,setFitProfile]=useState(null);
 
   useEffect(() => {
-    const handleOpenAuth = () => setIsGoogleAuthModalOpen(true);
+    const handleOpenAuth = () => setIsAuthModalOpen(true);
     const handleOpenFit = () => setIsFitProfileModalOpen(true);
     window.addEventListener('open-auth-modal', handleOpenAuth);
     window.addEventListener('open-fit-finder', handleOpenFit);
@@ -399,7 +399,7 @@ export default function App() {
         title: "Sign In Required",
         message: "Please sign in or create an account to add items to your shopping bag."
       });
-      setIsGoogleAuthModalOpen(true);
+      setIsAuthModalOpen(true);
       return false;
     }
     addToCartDirect(product, size, color, quantity);
@@ -824,7 +824,7 @@ export default function App() {
           onCheckout={() => {
             if (!currentUser) {
               setIsCartOpen(false);
-              setIsGoogleAuthModalOpen(true);
+              setIsAuthModalOpen(true);
               setToastNotification({
                 title: "Sign In Required",
                 message: "Please sign in or create an account to proceed to checkout."

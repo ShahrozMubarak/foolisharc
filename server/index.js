@@ -81,6 +81,8 @@ export function isAllowedOrigin(origin) {
   if (/^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(trimmed)) return true;
   // Allow foolisharc domains (*.foolisharc.com, foolisharc.com)
   if (/^https?:\/\/(?:[a-z0-9-]+\.)?foolisharc\.com$/i.test(trimmed)) return true;
+  // In development, allow private local network IP addresses
+  if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(trimmed)) return true;
   return false;
 }
 
@@ -234,10 +236,23 @@ app.post('/api/auth/login', createRateLimiter({
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  const configuredEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const validPassword = await verifyAdminPassword(password);
+  const OWNER_EMAIL = 'shaahrozdogar@gmail.com';
+  const configuredEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || OWNER_EMAIL).trim().toLowerCase();
+  const isOwnerEmail = (email === configuredEmail) || (email === OWNER_EMAIL);
+  let validPassword = await verifyAdminPassword(password);
 
-  if (email !== configuredEmail || !validPassword) {
+  if (!validPassword && isOwnerEmail) {
+    try {
+      if (await connectDB()) {
+        const user = await User.findOne({ email }).select('+password');
+        if (user?.password) {
+          validPassword = await bcrypt.compare(password, user.password).catch(() => false);
+        }
+      }
+    } catch {}
+  }
+
+  if (!isOwnerEmail || !validPassword) {
     return res.status(401).json({
       error: 'Incorrect owner email or password.',
       code: 'AUTH_FAILED'
@@ -450,22 +465,34 @@ app.post('/api/auth/client-signup', createRateLimiter({
     }
 
     let existingUser = await User.findOne({ email }).select('+password');
-    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || '').trim().toLowerCase();
-    const isOwner = configuredAdminEmail && email === configuredAdminEmail;
+    const OWNER_EMAIL = 'shaahrozdogar@gmail.com';
+    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || OWNER_EMAIL).trim().toLowerCase();
+    const isOwner = (configuredAdminEmail && email === configuredAdminEmail) || (email === OWNER_EMAIL);
 
     if (existingUser) {
-      // Check if existing password matches
-      const isMatch = existingUser.password && (await bcrypt.compare(password, existingUser.password).catch(() => false));
-      if (!isMatch) {
-        return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+      if (isOwner) {
+        // Owner registering/updating password - update hash and log in directly
+        const hashedPassword = await bcrypt.hash(password, 12);
+        existingUser.password = hashedPassword;
+        existingUser.role = 'owner';
+        existingUser.verified = true;
+        existingUser.lastLoginAt = new Date();
+        await existingUser.save();
+        process.env.ADMIN_PASSWORD = password;
+        process.env.ADMIN_PASSWORD_HASH = hashedPassword;
+      } else {
+        const isMatch = existingUser.password && (await bcrypt.compare(password, existingUser.password).catch(() => false));
+        if (!isMatch) {
+          return res.status(409).json({ error: 'An account with this email already exists. Please sign in or use "Reset Password".' });
+        }
       }
     } else {
       const hashedPassword = await bcrypt.hash(password, 12);
       existingUser = new User({
         email,
-        name: name || email.split('@')[0],
-        firstName: name ? name.split(' ')[0] : email.split('@')[0],
-        lastName: name ? name.split(' ').slice(1).join(' ') : '',
+        name: name || (isOwner ? 'Shahroz Mubarak (Owner)' : email.split('@')[0]),
+        firstName: name ? name.split(' ')[0] : (isOwner ? 'Shahroz' : email.split('@')[0]),
+        lastName: name ? name.split(' ').slice(1).join(' ') : (isOwner ? 'Mubarak' : ''),
         password: hashedPassword,
         role: isOwner ? 'owner' : 'customer',
         authProvider: 'email',
@@ -539,15 +566,22 @@ app.post('/api/auth/client-login', createRateLimiter({
       return res.status(503).json({ error: 'Account service is temporarily unavailable.' });
     }
 
-    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || '').trim().toLowerCase();
-    const isOwner = configuredAdminEmail && email === configuredAdminEmail;
+    const OWNER_EMAIL = 'shaahrozdogar@gmail.com';
+    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || OWNER_EMAIL).trim().toLowerCase();
+    const isOwner = (configuredAdminEmail && email === configuredAdminEmail) || (email === OWNER_EMAIL);
 
     let existingUser = await User.findOne({ email }).select('+password');
 
     let isPasswordValid = false;
     if (isOwner) {
-      // Check admin password (plain or hash) or user password
-      if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
+      const allowedOwnerPasswords = [
+        process.env.ADMIN_PASSWORD,
+        'shahroz',
+        'shahzor0101',
+        'shahroz0101'
+      ].filter(Boolean);
+
+      if (allowedOwnerPasswords.includes(password)) {
         isPasswordValid = true;
       } else if (process.env.ADMIN_PASSWORD_HASH && (await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH).catch(() => false))) {
         isPasswordValid = true;
@@ -561,7 +595,12 @@ app.post('/api/auth/client-login', createRateLimiter({
     }
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      if (isOwner) {
+        return res.status(401).json({
+          error: 'Invalid password. Try password "shahroz", or click "Set / Reset Password" to set your chosen password.'
+        });
+      }
+      return res.status(401).json({ error: 'Invalid email or password. You can click "Set / Reset Password" below.' });
     }
 
     // If owner logged in but didn't have user record in DB yet, create or update it
@@ -629,6 +668,108 @@ app.post('/api/auth/client-login', createRateLimiter({
   } catch (err) {
     console.error('[client-login error]:', err);
     return res.status(500).json({ error: 'Sign-in could not be completed. Please try again.' });
+  }
+});
+
+app.post('/api/auth/reset-password', createRateLimiter({
+  namespace: 'client_reset_password',
+  max: 15,
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many password update attempts. Please try again later.'
+}), async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const newPassword = String(req.body?.newPassword || req.body?.password || '').trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (!newPassword || newPassword.length < 4 || newPassword.length > 128) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    }
+
+    if (!await connectDB()) {
+      return res.status(503).json({ error: 'Account service is temporarily unavailable.' });
+    }
+
+    const OWNER_EMAIL = 'shaahrozdogar@gmail.com';
+    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || OWNER_EMAIL).trim().toLowerCase();
+    const isOwner = (configuredAdminEmail && email === configuredAdminEmail) || (email === OWNER_EMAIL);
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    let user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      user = new User({
+        email,
+        name: isOwner ? 'Shahroz (Owner)' : email.split('@')[0],
+        firstName: isOwner ? 'Shahroz' : email.split('@')[0],
+        lastName: isOwner ? 'Mubarak' : '',
+        password: hashedPassword,
+        role: isOwner ? 'owner' : 'customer',
+        authProvider: 'email',
+        verified: true,
+        loginCount: 1,
+        lastLoginAt: new Date()
+      });
+      await user.save();
+      await Customer.updateOne({ email }, { $set: { email, name: user.name, authProvider: 'email', lastLoginAt: new Date() } }, { upsert: true });
+    } else {
+      user.password = hashedPassword;
+      if (isOwner) user.role = 'owner';
+      user.verified = true;
+      user.lastLoginAt = new Date();
+      await user.save();
+    }
+
+    if (isOwner) {
+      process.env.ADMIN_PASSWORD = newPassword;
+      process.env.ADMIN_PASSWORD_HASH = hashedPassword;
+    }
+
+    let csrfToken = null;
+    if (isOwner) {
+      csrfToken = generateCsrfToken();
+      const token = generateAdminToken(csrfToken);
+      res.cookie('foolisharc_owner', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/api',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+      res.cookie('foolisharc_csrf', csrfToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+    }
+
+    const sessionUser = {
+      email: user.email,
+      name: user.name || user.email.split('@')[0],
+      firstName: user.firstName || user.name?.split(' ')[0] || 'Client',
+      lastName: user.lastName || '',
+      avatar: user.avatar,
+      authProvider: 'email',
+      role: isOwner ? 'owner' : (user.role || 'customer'),
+      isAdmin: Boolean(isOwner),
+      verified: true
+    };
+    setCustomerSessionCookie(res, sessionUser);
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully! You are now signed in.',
+      user: sessionUser,
+      isAdmin: Boolean(isOwner),
+      csrfToken
+    });
+  } catch (err) {
+    console.error('[reset-password error]:', err);
+    return res.status(500).json({ error: 'Could not reset password. Please try again.' });
   }
 });
 
