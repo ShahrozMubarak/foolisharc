@@ -2112,7 +2112,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                     🔐 Owner Security &amp; Password Setup
                   </h3>
                   <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                    Configure your Studio Owner password for shaahrozdogar@gmail.com
+                    Configure your Studio Owner password
                   </p>
                 </div>
 

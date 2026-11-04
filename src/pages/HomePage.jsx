@@ -548,6 +548,45 @@ export default function HomePage({
       <div className="divider-wood max-w-6xl mx-auto my-6 sm:my-8" />
 
       {/* =========================================================================
+          7.5. ATELIER SEO EDIT & BRAND STORY (FOOLISH ARC / FOLISH ARC)
+      ========================================================================= */}
+      <section className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-12 border-t border-[#7A4B26]/10 text-neutral-800 dark:text-neutral-200">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="text-center space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9A6E3E]">
+              Atelier Heritage • FOOLISH ARC Official
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-black uppercase tracking-tight text-black dark:text-white">
+              FOOLISH ARC: Slow Luxury Pret &amp; Architectural Apparel
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 font-normal text-center sm:text-left">
+            Welcome to the official <strong>FOOLISH ARC</strong> store (also searched by our clients as <strong>Folish Arc</strong> or simply <strong>Foolish</strong>). Rooted in architectural minimalism and artisanal craftsmanship, FOOLISH ARC designs slow-fashion capsule collections woven from raw botanical fibers, European flax linen, and 13.5oz ring-spun cotton barrel denim.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
+            <div className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 space-y-1.5">
+              <h3 className="font-bold uppercase tracking-wider text-black dark:text-white">Slow Luxury Pret</h3>
+              <p className="text-neutral-500 dark:text-neutral-400 text-[11px] leading-relaxed">
+                Handcrafted garments in timeless earthy tones: Olive, Desert Camel, Alabaster, and Obsidian.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 space-y-1.5">
+              <h3 className="font-bold uppercase tracking-wider text-black dark:text-white">Architectural Denim</h3>
+              <p className="text-neutral-500 dark:text-neutral-400 text-[11px] leading-relaxed">
+                Heavyweight ring-spun cotton engineered in signature barrel-leg and relaxed utility cuts.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 space-y-1.5">
+              <h3 className="font-bold uppercase tracking-wider text-black dark:text-white">Precision Sizing</h3>
+              <p className="text-neutral-500 dark:text-neutral-400 text-[11px] leading-relaxed">
+                Precision Fit Finder algorithms match body chest and waist metrics to exact atelier silhouettes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
           8. GAZETTE SUBSCRIPTION WITH AUTOMATED NOTIFICATION
       ========================================================================= */}
       <section className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-16 sm:py-24 border-t border-[#7A4B26]/20 text-center">

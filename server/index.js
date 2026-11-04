@@ -71,9 +71,22 @@ const developmentOrigins = process.env.NODE_ENV === 'production'
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 const allowedOrigins = new Set([...developmentOrigins, ...configuredOrigins]);
 
+export function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  const trimmed = origin.trim().replace(/\/$/, '').toLowerCase();
+  if (allowedOrigins.has(trimmed)) return true;
+  // Allow all localhost and 127.0.0.1 ports (5173, 5174, 3000, 4173, 5000, etc.)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(trimmed)) return true;
+  // Allow all Vercel deployments (*.vercel.app)
+  if (/^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(trimmed)) return true;
+  // Allow foolisharc domains (*.foolisharc.com, foolisharc.com)
+  if (/^https?:\/\/(?:[a-z0-9-]+\.)?foolisharc\.com$/i.test(trimmed)) return true;
+  return false;
+}
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (isAllowedOrigin(origin)) return callback(null, true);
     return callback(Object.assign(new Error('Untrusted origin.'), { status: 403 }));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -352,7 +365,15 @@ app.post('/api/auth/google-code', createRateLimiter({ namespace: 'google_code', 
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
 
-    if (!code || code.length > 4096 || !/^[A-Za-z0-9._~-]{43,128}$/.test(codeVerifier) || !clientId || ![...allowedOrigins].some(origin => redirectUri === origin + '/auth/google/callback')) {
+    let redirectAllowed = false;
+    try {
+      const redirectOrigin = new URL(redirectUri).origin;
+      redirectAllowed = isAllowedOrigin(redirectOrigin) && new URL(redirectUri).pathname === '/auth/google/callback';
+    } catch {
+      redirectAllowed = false;
+    }
+
+    if (!code || code.length > 4096 || !/^[A-Za-z0-9._~-]{43,128}$/.test(codeVerifier) || !clientId || !redirectAllowed) {
       return res.status(400).json({ error: 'Authorization code, PKCE verifier, and Google Client ID are required.' });
     }
 

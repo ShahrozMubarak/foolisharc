@@ -393,8 +393,15 @@ export default function App() {
     });
   };
 
-  // Guest-friendly bag: customers can curate items before signing in or entering checkout details.
   const handleAddToCart = (product, size = 'M', color = null, quantity = 1) => {
+    if (!currentUser) {
+      setToastNotification({
+        title: "Sign In Required",
+        message: "Please sign in or create an account to add items to your shopping bag."
+      });
+      setIsGoogleAuthModalOpen(true);
+      return false;
+    }
     addToCartDirect(product, size, color, quantity);
     setSelectedProductModal(null);
     setIsCartOpen(true);
