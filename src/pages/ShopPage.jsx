@@ -87,12 +87,18 @@ export default function ShopPage({
             </p>
             <h1>The collection</h1>
             <p>
-              Explore the cuts, colours and textures of the atelier. Find your
-              size or put a look together in the fitting room.
+              Explore the cuts, colours and textures of the atelier. Use our precision fit finder to find your bespoke size.
             </p>
-            <Link to="/fitting-room">
-              Enter the fitting room <span aria-hidden="true">↗</span>
-            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-fit-finder'));
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9A6E3E] hover:underline cursor-pointer"
+            >
+              <span>📏 Find Your Size</span>
+              <span aria-hidden="true">↗</span>
+            </button>
           </div>
           <img src="/images/editorial_camel_banner.jpg" alt="" />
         </header>

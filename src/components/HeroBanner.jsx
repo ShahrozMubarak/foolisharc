@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function HeroBanner({ onShopNow, onOpenBrandGuide, onOpenFittingRoom }) {
+export default function HeroBanner({ onShopNow, onOpenBrandGuide, onOpenSizeFinder }) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-olive-900 via-olive-800 to-onyx-950 text-linen-100">
       {/* Decorative Warm Camel Glow */}
@@ -29,20 +29,20 @@ export default function HeroBanner({ onShopNow, onOpenBrandGuide, onOpenFittingR
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                onClick={onOpenFittingRoom || onShopNow}
-                className="bg-camel-500 hover:bg-camel-400 text-onyx-950 font-bold px-7 py-3 rounded-full shadow-lg hover:shadow-camel-500/20 transition transform active:scale-95 text-xs uppercase tracking-wider flex items-center space-x-2"
-              >
-                <span>👗 Enter Virtual Fitting Room</span>
-              </button>
-              <button
                 onClick={onShopNow}
-                className="bg-white/10 hover:bg-white/20 text-linen-100 border border-linen-300/40 font-bold px-6 py-3 rounded-full transition text-xs uppercase tracking-wider"
+                className="bg-camel-500 hover:bg-camel-400 text-onyx-950 font-bold px-7 py-3 rounded-full shadow-lg hover:shadow-camel-500/20 transition transform active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
               >
                 Shop Collection
               </button>
               <button
+                onClick={onOpenSizeFinder || onShopNow}
+                className="bg-white/10 hover:bg-white/20 text-linen-100 border border-linen-300/40 font-bold px-6 py-3 rounded-full transition text-xs uppercase tracking-wider flex items-center space-x-2 cursor-pointer"
+              >
+                <span>📏 Find Your Size</span>
+              </button>
+              <button
                 onClick={onOpenBrandGuide}
-                className="bg-transparent hover:bg-white/10 text-linen-200 border border-transparent hover:border-linen-300/40 font-medium px-4 py-3 rounded-full transition text-xs flex items-center space-x-1"
+                className="bg-transparent hover:bg-white/10 text-linen-200 border border-transparent hover:border-linen-300/40 font-medium px-4 py-3 rounded-full transition text-xs flex items-center space-x-1 cursor-pointer"
               >
                 <span>Color Palette</span>
                 <span className="text-xs">→</span>
@@ -66,10 +66,10 @@ export default function HeroBanner({ onShopNow, onOpenBrandGuide, onOpenFittingR
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="p-1.5 rounded-md bg-white/10 text-camel-300">👗</span>
+                <span className="p-1.5 rounded-md bg-white/10 text-camel-300">📏</span>
                 <div>
-                  <div className="font-semibold text-linen-50">3D Fitting Room</div>
-                  <div className="text-[10px] text-linen-300">360° Interactive Try-On</div>
+                  <div className="font-semibold text-linen-50">Precision Fit Finder</div>
+                  <div className="text-[10px] text-linen-300">Smart Size Advisory</div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">

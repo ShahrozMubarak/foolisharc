@@ -36,7 +36,6 @@ import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-const FittingRoomPage = lazy(() => import('./pages/FittingRoomPage'));
 function CartRoute({setOpen}) {
   useEffect(()=>{setOpen(true);},[setOpen]);
   return <Navigate to="/shop" replace/>;
@@ -324,6 +323,17 @@ export default function App() {
   const [isFabricModalOpen, setIsFabricModalOpen] = useState(false);
   const [isFitProfileModalOpen, setIsFitProfileModalOpen] = useState(false);
   const [fitProfile,setFitProfile]=useState(null);
+
+  useEffect(() => {
+    const handleOpenAuth = () => setIsGoogleAuthModalOpen(true);
+    const handleOpenFit = () => setIsFitProfileModalOpen(true);
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+    window.addEventListener('open-fit-finder', handleOpenFit);
+    return () => {
+      window.removeEventListener('open-auth-modal', handleOpenAuth);
+      window.removeEventListener('open-fit-finder', handleOpenFit);
+    };
+  }, []);
   useEffect(()=>{
     let active=true;
     setFitProfile(null);
@@ -708,10 +718,7 @@ export default function App() {
             />
 
             {/* Fitting Room Redirect */}
-            <Route path="/fitting-room" element={<FittingRoomPage products={products} outfits={outfits} selectedPerson={selectedPerson}
-              onSelectPerson={setSelectedPerson} onToggleEquip={handleToggleEquip} onSelectVariant={handleSelectVariant}
-              onClearOutfit={handleClearOutfit} onResetOutfit={handleResetOutfit} onAddLookToBag={handleAddLookToBag}
-              onAddToCart={handleAddToCart} onOpenBrandGuide={()=>setIsPaletteGuideOpen(true)}/>} />
+            <Route path="/fitting-room" element={<Navigate to="/shop" replace />} />
 
             {/* Lookbook Route */}
             <Route path="/lookbook" element={<Navigate to="/shop" replace />} />
@@ -808,6 +815,15 @@ export default function App() {
           fitProfile={fitProfile}
           onSwitchItemSize={handleSwitchCartItemSize}
           onCheckout={() => {
+            if (!currentUser) {
+              setIsCartOpen(false);
+              setIsGoogleAuthModalOpen(true);
+              setToastNotification({
+                title: "Sign In Required",
+                message: "Please sign in or create an account to proceed to checkout."
+              });
+              return;
+            }
             setIsCartOpen(false);
             setIsCheckoutOpen(true);
           }}
@@ -816,7 +832,7 @@ export default function App() {
         <FitFinderModal
           isOpen={isFitProfileModalOpen}
           onClose={() => setIsFitProfileModalOpen(false)}
-          product={products[0]}
+          product={selectedProductModal || products[0]}
           fitProfile={fitProfile}
           onSaveProfile={handleSaveFitProfile}
           onDeleteProfile={handleDeleteFitProfile}
@@ -858,6 +874,7 @@ export default function App() {
             onTryOn={handleTryOnProduct}
             onToggleWishlist={handleToggleWishlist}
             isWishlisted={selectedProductModal ? wishlist.includes(selectedProductModal.id) : false}
+            onOpenFitFinder={() => setIsFitProfileModalOpen(true)}
             onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
           />
         )}

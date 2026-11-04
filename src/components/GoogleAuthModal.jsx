@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
 import { launchGooglePopupLogin as loginWithGooglePopup } from '../utils/googleAuth';
-import { setPasswordInDB, loginWithEmailAndPassword, syncGoogleClientToDB } from '../services/api';
+import { setPasswordInDB, loginWithEmailAndPassword, signupWithEmailAndPassword, syncGoogleClientToDB } from '../services/api';
 
 export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
   const [step, setStep] = useState('login'); // 'login' | 'set_password'
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -15,7 +17,9 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
   useEffect(() => {
     if (isOpen) {
+      setAuthMode('signin');
       setStep('login');
+      setName('');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
@@ -28,30 +32,63 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  // Direct Email & Password Sign In
-  const handleSignIn = async (e) => {
+  // Direct Email & Password Sign In or Sign Up
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
 
     const cleanEmail = email.toLowerCase().trim();
-    if (!cleanEmail || !password) {
-      setError('Please provide both email and password.');
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please provide a valid email address.');
       return;
+    }
+    if (!password || password.length < 4) {
+      setError('Please provide a password of at least 4 characters.');
+      return;
+    }
+
+    if (authMode === 'signup') {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match. Please re-enter.');
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
-      const result = await loginWithEmailAndPassword({ email: cleanEmail, password });
+      let result;
+      if (authMode === 'signup') {
+        result = await signupWithEmailAndPassword({
+          name: name.trim(),
+          email: cleanEmail,
+          password
+        });
+      } else {
+        result = await loginWithEmailAndPassword({ email: cleanEmail, password });
+      }
+
       const authenticatedUser = result?.user;
-      if (!authenticatedUser) throw new Error('Invalid email or password.');
+      if (!authenticatedUser) throw new Error('Authentication could not be completed.');
 
+      if (result?.isAdmin || authenticatedUser?.isAdmin || authenticatedUser?.role === 'owner') {
+        setSuccessMsg('Welcome, Owner! Full atelier and admin control unlocked.');
+      } else {
+        setSuccessMsg(authMode === 'signup' ? 'Account created successfully! Welcome to FOOLISH ARC.' : 'Welcome back!');
+      }
 
-      if (onSuccess) onSuccess(authenticatedUser);
-      if (onClose) onClose();
+      setTimeout(() => {
+        if (onSuccess) onSuccess(authenticatedUser);
+        if (onClose) onClose();
+      }, 700);
     } catch (err) {
-      setError(err?.message || 'Login failed. Please check your credentials.');
+      const errMsg = err?.message || 'Authentication failed. Please check your credentials.';
+      if (errMsg.includes('Invalid email or password') && authMode === 'signin') {
+        setError('Invalid email or password. If you do not have an account yet, click "Create Account" below.');
+      } else {
+        setError(errMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -72,8 +109,16 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           setEmail(cleanEmail);
 
           try {
-            await syncGoogleClientToDB(googleUser);
-            setStep('set_password');
+            const syncRes = await syncGoogleClientToDB(googleUser);
+            if (syncRes?.user?.role === 'owner' || syncRes?.isAdmin) {
+              setSuccessMsg('Welcome, Owner! Full admin access granted.');
+              setTimeout(() => {
+                if (onSuccess) onSuccess(syncRes.user);
+                if (onClose) onClose();
+              }, 700);
+            } else {
+              setStep('set_password');
+            }
           } catch (syncError) {
             setPendingGoogleUser(null);
             setError(syncError?.message || 'Google account verification failed. Please try again.');
@@ -104,8 +149,8 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
       setError('Please enter a password.');
       return;
     }
-    if (password.length < 12) {
-      setError('Password must be at least 12 characters.');
+    if (password.length < 4) {
+      setError('Password must be at least 4 characters.');
       return;
     }
     if (password !== confirmPassword) {
@@ -160,7 +205,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-2xl font-light w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-800/50 transition"
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-100 text-2xl font-light w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-800/50 transition cursor-pointer"
           aria-label="Close"
         >
           &times;
@@ -172,11 +217,39 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           {step === 'login' ? (
             <>
               <h2 className="mt-4 text-xl font-black uppercase tracking-tight text-stone-100">
-                Welcome to FOOLISH ARC
+                {authMode === 'signup' ? 'Create Your Account' : 'Welcome to FOOLISH ARC'}
               </h2>
               <p className="text-xs text-stone-400 mt-1">
-                Sign in with your email &amp; password or Google
+                {authMode === 'signup'
+                  ? 'Sign up to shop, save orders & access personalized tailoring'
+                  : 'Sign in with your email & password or Google'}
               </p>
+
+              {/* Mode Switcher Tabs */}
+              <div className="flex w-full mt-5 rounded-xl bg-stone-900/90 p-1 border border-stone-800">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signin'); setError(''); }}
+                  className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition ${
+                    authMode === 'signin'
+                      ? 'bg-[#C69F6F] text-stone-950 shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signup'); setError(''); }}
+                  className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition ${
+                    authMode === 'signup'
+                      ? 'bg-[#C69F6F] text-stone-950 shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -202,12 +275,27 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
           </div>
         )}
 
-        {/* STEP 1: LOGIN VIEW */}
+        {/* STEP 1: LOGIN / SIGNUP VIEW */}
         {step === 'login' && (
           <div>
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleAuthSubmit} className="space-y-3.5">
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Shahroz Mubarak"
+                    className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
                   Email Address
                 </label>
                 <input
@@ -221,7 +309,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
                   Password
                 </label>
                 <input
@@ -234,16 +322,32 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
 
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
+                    required
+                  />
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 mt-1 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50"
+                className="w-full py-3 mt-2 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
-                {loading ? 'VERIFYING...' : 'SIGN IN WITH PASSWORD'}
+                {loading ? 'PROCESSING...' : (authMode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN WITH PASSWORD')}
               </button>
             </form>
 
-            <div className="relative my-6 text-center">
+            <div className="relative my-5 text-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-stone-800"></div>
               </div>
@@ -256,7 +360,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full py-3 bg-stone-900 hover:bg-stone-800 border border-stone-700/80 text-stone-100 font-bold text-xs tracking-wider uppercase rounded-xl transition duration-200 flex items-center justify-center gap-3 shadow-md active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-3 bg-stone-900 hover:bg-stone-800 border border-stone-700/80 text-stone-100 font-bold text-xs tracking-wider uppercase rounded-xl transition duration-200 flex items-center justify-center gap-3 shadow-md active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -303,7 +407,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
             <form onSubmit={handleSavePasswordAndComplete} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-300 mb-1.5 flex justify-between">
-                  <span>Add / Confirm Email</span>
+                  <span>Confirm Email</span>
                   <span className="text-[#C69F6F] lowercase font-normal">account &amp; orders</span>
                 </label>
                 <input
@@ -324,10 +428,10 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 12 characters"
+                  placeholder="Minimum 4 characters"
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   required
-                  minLength={12}
+                  minLength={4}
                 />
               </div>
 
@@ -342,14 +446,14 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                   placeholder="Re-enter password to confirm"
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-900 border border-stone-800 rounded-xl text-stone-100 focus:outline-none focus:border-[#C69F6F] transition"
                   required
-                  minLength={12}
+                  minLength={4}
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 mt-1 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50"
+                className="w-full py-3 mt-1 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
                 {loading ? 'SAVING CREDENTIALS...' : 'SAVE PASSWORD & COMPLETE SIGN IN'}
               </button>
@@ -359,7 +463,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={handleSkipPassword}
-                className="text-xs text-stone-400 hover:text-stone-200 underline underline-offset-4 font-medium transition"
+                className="text-xs text-stone-400 hover:text-stone-200 underline underline-offset-4 font-medium transition cursor-pointer"
               >
                 Skip password creation for now
               </button>

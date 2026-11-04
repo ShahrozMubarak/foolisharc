@@ -15,6 +15,7 @@ export default function ProductModal({
   onAddToCart,
   onTryOn,
   onOpenSizeGuide,
+  onOpenFitFinder,
   isWishlisted,
   onToggleWishlist
 }) {
@@ -156,17 +157,20 @@ export default function ProductModal({
                   <span className="text-neutral-800 dark:text-neutral-200">
                     Size: <strong>{selectedSize}</strong>
                   </span>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setShowFitHelper(!showFitHelper)}
-                      className="text-[#9A6E3E] underline font-bold cursor-pointer"
+                      type="button"
+                      onClick={() => onOpenFitFinder ? onOpenFitFinder(product) : setShowFitHelper(!showFitHelper)}
+                      className="px-2.5 py-1 rounded-lg border border-[#C69F6F] bg-[#FAF8F5] dark:bg-[#201A16] text-[#7A4B26] dark:text-[#E6D3B3] text-[11px] font-bold hover:bg-[#F2E9DE] transition cursor-pointer flex items-center gap-1 shadow-2xs"
                     >
-                      Find Fit
+                      <span>📏</span>
+                      <span>Find Your Size</span>
                     </button>
                     {onOpenSizeGuide && (
                       <button
+                        type="button"
                         onClick={onOpenSizeGuide}
-                        className="text-neutral-500 hover:underline cursor-pointer"
+                        className="text-neutral-500 hover:underline cursor-pointer text-xs"
                       >
                         Size Guide
                       </button>

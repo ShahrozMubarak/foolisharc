@@ -217,7 +217,7 @@ app.post('/api/auth/login', createRateLimiter({
   const email = String(req.body?.email || '').trim().toLowerCase();
   const password = req.body?.password;
 
-  if (!email || email.length > 254 || typeof password !== 'string' || password.length < 12 || password.length > 128) {
+  if (!email || email.length > 254 || typeof password !== 'string' || password.length < 4 || password.length > 128) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
@@ -304,7 +304,9 @@ app.post('/api/auth/customer-logout', (req, res) => {
 async function finishGoogleSignIn(res, profile, password) {
   if (!await connectDB()) return res.status(503).json({ error: 'Account service is temporarily unavailable.' });
   const authProvider = password ? 'google_password' : 'google';
-  const fields = { ...profile, authProvider, verified: true, lastLoginAt: new Date() };
+  const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || '').trim().toLowerCase();
+  const isOwner = configuredAdminEmail && profile.email.toLowerCase() === configuredAdminEmail;
+  const fields = { ...profile, authProvider, verified: true, role: isOwner ? 'owner' : 'customer', lastLoginAt: new Date() };
   if (password) fields.password = await bcrypt.hash(password, 12);
   try {
     await User.updateOne(
@@ -317,9 +319,29 @@ async function finishGoogleSignIn(res, profile, password) {
   }
   await Customer.updateOne({ email: profile.email }, { $set: { ...profile, authProvider, lastLoginAt: new Date() } }, { upsert: true });
   const { googleId, ...customer } = profile;
-  const user = { ...customer, authProvider, verified: true };
+  const user = { ...customer, authProvider, verified: true, role: isOwner ? 'owner' : 'customer', isAdmin: Boolean(isOwner) };
+  
+  if (isOwner) {
+    const csrfToken = generateCsrfToken();
+    const token = generateAdminToken(csrfToken);
+    res.cookie('foolisharc_owner', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api',
+      maxAge: 2 * 60 * 60 * 1000
+    });
+    res.cookie('foolisharc_csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 2 * 60 * 60 * 1000
+    });
+  }
+
   setCustomerSessionCookie(res, user);
-  return res.json({ success: true, user });
+  return res.json({ success: true, user, isAdmin: Boolean(isOwner) });
 }
 
 app.post('/api/auth/google-code', createRateLimiter({ namespace: 'google_code', max: 20 }), async (req, res) => {
@@ -384,31 +406,75 @@ app.post('/api/auth/set-password', createRateLimiter({ namespace: 'set_password'
   }
 });
 
-app.post('/api/auth/client-login', createRateLimiter({
-  namespace: 'client_login',
-  max: 8,
+app.post('/api/auth/client-signup', createRateLimiter({
+  namespace: 'client_signup',
+  max: 15,
   windowMs: 15 * 60 * 1000,
-  message: 'Too many sign-in attempts. Please try again later.'
+  message: 'Too many registration attempts. Please try again later.'
 }), async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = req.body?.password;
-    if (!email || email.length > 254 || typeof password !== 'string' || password.length < 12 || password.length > 128) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+    const name = String(req.body?.name || '').trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (typeof password !== 'string' || password.length < 4 || password.length > 128) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
     }
 
     if (!await connectDB()) {
       return res.status(503).json({ error: 'Account service is temporarily unavailable.' });
     }
 
-    const existingUser = await User.findOne({ email }).select('+password');
-    if (!existingUser?.password || !(await bcrypt.compare(password, existingUser.password))) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+    let existingUser = await User.findOne({ email }).select('+password');
+    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || '').trim().toLowerCase();
+    const isOwner = configuredAdminEmail && email === configuredAdminEmail;
+
+    if (existingUser) {
+      // Check if existing password matches
+      const isMatch = existingUser.password && (await bcrypt.compare(password, existingUser.password).catch(() => false));
+      if (!isMatch) {
+        return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+      }
+    } else {
+      const hashedPassword = await bcrypt.hash(password, 12);
+      existingUser = new User({
+        email,
+        name: name || email.split('@')[0],
+        firstName: name ? name.split(' ')[0] : email.split('@')[0],
+        lastName: name ? name.split(' ').slice(1).join(' ') : '',
+        password: hashedPassword,
+        role: isOwner ? 'owner' : 'customer',
+        authProvider: 'email',
+        verified: true,
+        loginCount: 1,
+        lastLoginAt: new Date()
+      });
+      await existingUser.save();
+      await Customer.updateOne({ email }, { $set: { email, name: existingUser.name, authProvider: 'email', lastLoginAt: new Date() } }, { upsert: true });
     }
 
-    existingUser.lastLoginAt = new Date();
-    existingUser.loginCount = (existingUser.loginCount || 0) + 1;
-    await existingUser.save();
+    let csrfToken = null;
+    if (isOwner) {
+      csrfToken = generateCsrfToken();
+      const token = generateAdminToken(csrfToken);
+      res.cookie('foolisharc_owner', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/api',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+      res.cookie('foolisharc_csrf', csrfToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+    }
 
     const sessionUser = {
       email: existingUser.email,
@@ -417,16 +483,173 @@ app.post('/api/auth/client-login', createRateLimiter({
       lastName: existingUser.lastName || '',
       avatar: existingUser.avatar,
       authProvider: existingUser.authProvider || 'email',
+      role: isOwner ? 'owner' : (existingUser.role || 'customer'),
+      isAdmin: Boolean(isOwner),
+      verified: true
+    };
+    setCustomerSessionCookie(res, sessionUser);
+
+    return res.json({
+      success: true,
+      user: sessionUser,
+      isAdmin: Boolean(isOwner),
+      csrfToken
+    });
+  } catch (err) {
+    console.error('[client-signup error]:', err);
+    return res.status(500).json({ error: 'Registration could not be completed. Please try again.' });
+  }
+});
+
+app.post('/api/auth/client-login', createRateLimiter({
+  namespace: 'client_login',
+  max: 15,
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many sign-in attempts. Please try again later.'
+}), async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = req.body?.password;
+    if (!email || email.length > 254 || typeof password !== 'string' || password.length < 4 || password.length > 128) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    if (!await connectDB()) {
+      return res.status(503).json({ error: 'Account service is temporarily unavailable.' });
+    }
+
+    const configuredAdminEmail = String(process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || '').trim().toLowerCase();
+    const isOwner = configuredAdminEmail && email === configuredAdminEmail;
+
+    let existingUser = await User.findOne({ email }).select('+password');
+
+    let isPasswordValid = false;
+    if (isOwner) {
+      // Check admin password (plain or hash) or user password
+      if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
+        isPasswordValid = true;
+      } else if (process.env.ADMIN_PASSWORD_HASH && (await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH).catch(() => false))) {
+        isPasswordValid = true;
+      } else if (existingUser?.password && (await bcrypt.compare(password, existingUser.password).catch(() => false))) {
+        isPasswordValid = true;
+      }
+    } else {
+      if (existingUser?.password) {
+        isPasswordValid = await bcrypt.compare(password, existingUser.password).catch(() => false);
+      }
+    }
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // If owner logged in but didn't have user record in DB yet, create or update it
+    if (!existingUser) {
+      existingUser = new User({
+        email,
+        name: 'Shahroz (Owner)',
+        firstName: 'Shahroz',
+        lastName: 'Mubarak',
+        role: 'owner',
+        authProvider: 'email',
+        verified: true,
+        loginCount: 1,
+        lastLoginAt: new Date()
+      });
+      await existingUser.save();
+    } else {
+      existingUser.lastLoginAt = new Date();
+      existingUser.loginCount = (existingUser.loginCount || 0) + 1;
+      if (isOwner && existingUser.role !== 'owner') {
+        existingUser.role = 'owner';
+      }
+      await existingUser.save();
+    }
+
+    let csrfToken = null;
+    if (isOwner) {
+      csrfToken = generateCsrfToken();
+      const token = generateAdminToken(csrfToken);
+      res.cookie('foolisharc_owner', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/api',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+      res.cookie('foolisharc_csrf', csrfToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+    }
+
+    const sessionUser = {
+      email: existingUser.email,
+      name: existingUser.name || existingUser.email.split('@')[0],
+      firstName: existingUser.firstName || existingUser.name?.split(' ')[0] || 'Client',
+      lastName: existingUser.lastName || '',
+      avatar: existingUser.avatar,
+      authProvider: existingUser.authProvider || 'email',
+      role: isOwner ? 'owner' : (existingUser.role || 'customer'),
+      isAdmin: Boolean(isOwner),
       verified: Boolean(existingUser.verified)
     };
     setCustomerSessionCookie(res, sessionUser);
 
     return res.json({
       success: true,
-      user: sessionUser
+      user: sessionUser,
+      isAdmin: Boolean(isOwner),
+      csrfToken
     });
   } catch (err) {
+    console.error('[client-login error]:', err);
     return res.status(500).json({ error: 'Sign-in could not be completed. Please try again.' });
+  }
+});
+
+app.post('/api/admin/change-password', requireAdminAuth, async (req, res) => {
+  try {
+    const newPassword = String(req.body?.newPassword || '').trim();
+    if (!newPassword || newPassword.length < 4 || newPassword.length > 128) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters.' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    process.env.ADMIN_PASSWORD = newPassword;
+    process.env.ADMIN_PASSWORD_HASH = hash;
+
+    // Update .env file
+    try {
+      const fs = await import('node:fs/promises');
+      const envPath = new URL('../.env', import.meta.url).pathname;
+      let envContent = await fs.readFile(envPath, 'utf8');
+      if (envContent.includes('ADMIN_PASSWORD=')) {
+        envContent = envContent.replace(/ADMIN_PASSWORD=.*(?:\r?\n|$)/, `ADMIN_PASSWORD=${newPassword}\n`);
+      }
+      if (envContent.includes('ADMIN_PASSWORD_HASH=')) {
+        envContent = envContent.replace(/ADMIN_PASSWORD_HASH=.*(?:\r?\n|$)/, `ADMIN_PASSWORD_HASH=${hash}\n`);
+      } else {
+        envContent += `\nADMIN_PASSWORD_HASH=${hash}\n`;
+      }
+      await fs.writeFile(envPath, envContent, 'utf8');
+    } catch (fsErr) {
+      console.warn('[change-password] .env file write skipped:', fsErr.message);
+    }
+
+    if (await connectDB()) {
+      await User.updateOne(
+        { email: req.admin.email },
+        { $set: { password: hash } }
+      );
+    }
+
+    return res.json({ success: true, message: 'Owner password updated successfully.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update password.' });
   }
 });
 

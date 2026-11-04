@@ -145,6 +145,30 @@ export async function loginWithEmailAndPassword(credentials) {
   return data;
 }
 
+export async function signupWithEmailAndPassword(credentials) {
+  const res = await fetch(`${API_BASE}/auth/client-signup`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(credentials)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Registration failed');
+  return data;
+}
+
+export async function updateAdminPassword(newPassword) {
+  const res = await fetch(`${API_BASE}/admin/change-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ newPassword })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to update password');
+  return data;
+}
+
 /**
  * 📏 FIT FINDER API HELPERS
  */

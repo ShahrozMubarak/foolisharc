@@ -17,23 +17,36 @@ export function getJwtSecretOrFallback() {
       : devSecret;
 }
 export function isAdminAuthConfigured() {
+  const hasSecret = (process.env.JWT_SECRET || '').length >= 16;
+  const hasHash = /^\$2[aby]\$/.test(process.env.ADMIN_PASSWORD_HASH || '');
+  const hasPlain = Boolean(process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length >= 4);
   return (
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail()) &&
-    /^\$2[aby]\$/.test(process.env.ADMIN_PASSWORD_HASH || '') &&
-    (process.env.JWT_SECRET || '').length >= 32
+    (hasHash || hasPlain) &&
+    hasSecret
   );
 }
 export async function verifyAdminPassword(password) {
   if (
     !isAdminAuthConfigured() ||
     typeof password !== 'string' ||
-    password.length < 12 ||
+    password.length < 4 ||
     password.length > 128
   )
     return false;
-  return bcrypt
-    .compare(password, process.env.ADMIN_PASSWORD_HASH)
-    .catch(() => false);
+
+  if (process.env.ADMIN_PASSWORD_HASH && /^\$2[aby]\$/.test(process.env.ADMIN_PASSWORD_HASH)) {
+    const matched = await bcrypt
+      .compare(password, process.env.ADMIN_PASSWORD_HASH)
+      .catch(() => false);
+    if (matched) return true;
+  }
+
+  if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
+    return true;
+  }
+
+  return false;
 }
 export const generateCsrfToken = () => randomBytes(32).toString('hex');
 export function signHs256Jwt(payload, secret, options) {

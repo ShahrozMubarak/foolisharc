@@ -151,12 +151,15 @@ export default function Feature3DSection({ className = "" }) {
               {autoRotate ? 'Turntable Active' : 'Start Turntable'}
             </button>
 
-            <Link
-              to="/fitting-room"
-              className="px-4 py-1.5 rounded-full bg-onyx-950 dark:bg-linen-100 text-linen-100 dark:text-onyx-950 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition shadow-sm"
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-fit-finder'));
+              }}
+              className="px-4 py-1.5 rounded-full bg-onyx-950 dark:bg-linen-100 text-linen-100 dark:text-onyx-950 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition shadow-sm cursor-pointer"
             >
-              Enter Fitting Room →
-            </Link>
+              📏 Find Your Size →
+            </button>
           </div>
         </div>
 

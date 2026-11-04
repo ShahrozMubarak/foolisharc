@@ -280,6 +280,43 @@ export default function CheckoutModal({
 
   if (!isOpen) return null;
 
+  if (!user) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-onyx-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-[#141210] rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-[#2B231D] p-8 text-center text-stone-100">
+          <div className="w-12 h-12 rounded-full bg-[#C69F6F]/20 text-[#C69F6F] flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+            🔒
+          </div>
+          <h3 className="font-serif text-2xl font-black uppercase tracking-tight text-white mb-2">
+            Sign In Required
+          </h3>
+          <p className="text-xs text-stone-400 mb-6 leading-relaxed">
+            To ensure the security and privacy of bespoke atelier orders, you must be signed in to enter delivery info and complete checkout.
+          </p>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('open-auth-modal'));
+              }}
+              className="w-full py-3 bg-[#C69F6F] hover:bg-[#b88f5f] text-stone-950 font-black text-xs tracking-widest uppercase rounded-xl transition duration-200 shadow-lg cursor-pointer"
+            >
+              Sign In / Create Account
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 text-xs text-stone-400 hover:text-stone-200 uppercase tracking-wider font-bold transition cursor-pointer"
+            >
+              Return to Bag
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-onyx-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
       <div className="bg-white dark:bg-[#1A1613] rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl border border-[#E6D3B3] relative fade-in">

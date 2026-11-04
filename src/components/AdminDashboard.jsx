@@ -13,7 +13,8 @@ import {
   fetchCustomersFromDB,
   fetchInquiriesFromDB,
   fetchThemeFromDB,
-  saveThemeToDB
+  saveThemeToDB,
+  updateAdminPassword
 } from '../services/api';
 import { notifyOrderApproved, notifyOrderStatusChange } from '../services/notificationService';
 import ChartJS from 'chart.js/auto';
@@ -86,6 +87,29 @@ export default function AdminDashboard({
     }
   });
   const [siteSettingsSaved, setSiteSettingsSaved] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [adminPasswordStatus, setAdminPasswordStatus] = useState('');
+  const [adminPasswordLoading, setAdminPasswordLoading] = useState(false);
+
+  const handleUpdateAdminPassword = async (e) => {
+    e.preventDefault();
+    if (!newAdminPassword || newAdminPassword.length < 4) {
+      setAdminPasswordStatus('Password must be at least 4 characters.');
+      return;
+    }
+    setAdminPasswordLoading(true);
+    setAdminPasswordStatus('');
+    try {
+      await updateAdminPassword(newAdminPassword);
+      setAdminPasswordStatus('✓ Owner password updated successfully!');
+      setNewAdminPassword('');
+      showToast('Owner password updated.');
+    } catch (err) {
+      setAdminPasswordStatus(err.message || 'Failed to update password.');
+    } finally {
+      setAdminPasswordLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -2078,7 +2102,56 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                 </div>
               </div>
 
-              {/* 2. Brand Identity & Palette */}
+              {/* 2. Owner Security & Password Setup */}
+              <div
+                className="rounded-[26px] p-6 sm:p-8 shadow-sm border border-black/5 space-y-6 transition-colors duration-500"
+                style={{ backgroundColor: activeTheme.cardBg }}
+              >
+                <div className="pb-4 border-b border-black/5">
+                  <h3 className="text-base font-black text-neutral-900 tracking-tight">
+                    🔐 Owner Security &amp; Password Setup
+                  </h3>
+                  <p className="text-xs text-neutral-500 font-medium mt-0.5">
+                    Configure your Studio Owner password for shaahrozdogar@gmail.com
+                  </p>
+                </div>
+
+                <form onSubmit={handleUpdateAdminPassword} className="space-y-4 max-w-md">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2">
+                      New Owner Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
+                    />
+                  </div>
+
+                  {adminPasswordStatus && (
+                    <div className={`text-xs font-bold p-3 rounded-xl ${
+                      adminPasswordStatus.startsWith('✓')
+                        ? 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+                        : 'text-rose-800 bg-rose-50 border border-rose-200'
+                    }`}>
+                      {adminPasswordStatus}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={adminPasswordLoading}
+                    className="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition cursor-pointer"
+                    style={{ backgroundColor: activeTheme.accent }}
+                  >
+                    {adminPasswordLoading ? 'Updating...' : 'Update Owner Password'}
+                  </button>
+                </form>
+              </div>
+
+              {/* 3. Brand Identity & Palette */}
               <div
                 className="rounded-[26px] p-6 sm:p-8 shadow-sm border border-black/5 space-y-6 transition-colors duration-500"
                 style={{ backgroundColor: activeTheme.cardBg }}
