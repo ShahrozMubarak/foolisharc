@@ -98,6 +98,14 @@ app.use(cors({
 }));
 
 app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+  if (host === 'foolisharc.com') {
+    return res.redirect(301, `https://www.foolisharc.com${req.originalUrl}`);
+  }
+  next();
+});
+
+app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com blob: data:; worker-src 'self' blob:; frame-src https://accounts.google.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'");
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

@@ -67,3 +67,4 @@ ${itemsXml}
 const outPath = join(__dirname, "..", "public", "merchant-feed.xml");
 writeFileSync(outPath, feedXml, "utf8");
 console.log(`Merchant Center feed generated with ${PRODUCTS.length} products at public/merchant-feed.xml`);
+

@@ -196,9 +196,23 @@ export default function ShopPage({
             <p className="atelier-kicker">
               FOOLISH ARC &nbsp; / &nbsp; Permanent edition
             </p>
-            <h1>The collection</h1>
+            <h1>
+              {gender === "women"
+                ? "Women's Collection"
+                : gender === "men"
+                ? "Men's Collection"
+                : gender === "kids"
+                ? "Kids' Collection"
+                : "The Collection"}
+            </h1>
             <p>
-              Explore the cuts, colours and textures of the atelier. Use our precision fit finder to find your bespoke size.
+              {gender === "women"
+                ? "Explore tailored women's shirts, architectural denim, and slow-luxury pret designed for permanent wear."
+                : gender === "men"
+                ? "Explore relaxed linen shirts, signature barrel-leg denim, and heavyweight cotton essentials for men."
+                : gender === "kids"
+                ? "Explore thoughtful everyday organic cotton tees and relaxed chino shorts for juniors."
+                : "Explore the cuts, colours and textures of the atelier. Use our precision fit finder to find your bespoke size."}
             </p>
             <button
               type="button"

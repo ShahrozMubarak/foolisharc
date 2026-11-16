@@ -5,19 +5,15 @@
   "outputDirectory": "dist",
   "redirects": [
     {
-      "source": "http://foolisharc.com/:path*",
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "foolisharc.com"
+        }
+      ],
       "destination": "https://www.foolisharc.com/:path*",
-      "statusCode": 301
-    },
-    {
-      "source": "https://foolisharc.com/:path*",
-      "destination": "https://www.foolisharc.com/:path*",
-      "statusCode": 301
-    },
-    {
-      "source": "http://www.foolisharc.com/:path*",
-      "destination": "https://www.foolisharc.com/:path*",
-      "statusCode": 301
+      "permanent": true
     }
   ],
   "rewrites": [
