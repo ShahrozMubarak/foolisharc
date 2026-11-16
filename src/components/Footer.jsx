@@ -146,6 +146,9 @@ export default function Footer({ onOpenSizeGuide }) {
         {/* Clean Minimalist Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#3D2916] font-sans font-semibold gap-3">
           <p>© {new Date().getFullYear()} FOOLISH ARC. All rights reserved.</p>
+          <p className="text-[#111315] dark:text-[#E8E0D5] font-mono tracking-widest text-[11px] uppercase font-bold">
+            Powered by HashDecode
+          </p>
           <p className="text-[#2C1F13] font-bold">NEW YORK • LAHORE • PARIS</p>
         </div>
 

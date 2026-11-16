@@ -936,6 +936,7 @@ a:hover .arrow-runway-up span:nth-child(2) {
 
 .atelier-kicker { font:700 .65rem/1.5 ui-monospace,monospace; letter-spacing:.15em; text-transform:uppercase; }
 .collection-intro { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); background:#2d3b31; color:#faf8f2; overflow:hidden; border-radius:1rem; }
+.collection-intro.collection-intro-no-img { display:block; }
 .collection-copy { align-self:center; padding:clamp(1.5rem,4vw,3.8rem); }
 .collection-copy .atelier-kicker { color:#dfc8a2; }
 .collection-copy h1 { margin:.65rem 0; font:clamp(2.7rem,5vw,5rem)/1.02 Georgia,serif; letter-spacing:-.05em; }

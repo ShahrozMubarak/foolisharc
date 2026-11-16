@@ -175,9 +175,9 @@ function setCustomerSessionCookie(res, user) {
 }
 
 function getPublicPaymentMethods() {
-  const jazzcashNumber = (process.env.PAYMENT_JAZZCASH_ACCOUNT_NUMBER || '03001234567').trim();
+  const jazzcashNumber = (process.env.PAYMENT_JAZZCASH_ACCOUNT_NUMBER || '03001237124').trim();
   const jazzcashTitle = (process.env.PAYMENT_JAZZCASH_ACCOUNT_TITLE || 'FOOLISH ARC').trim();
-  const easypaisaNumber = (process.env.PAYMENT_EASYPAISA_ACCOUNT_NUMBER || '03451234567').trim();
+  const easypaisaNumber = (process.env.PAYMENT_EASYPAISA_ACCOUNT_NUMBER || '03001237124').trim();
   const easypaisaTitle = (process.env.PAYMENT_EASYPAISA_ACCOUNT_TITLE || 'FOOLISH ARC').trim();
 
   return [

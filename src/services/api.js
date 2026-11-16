@@ -252,14 +252,14 @@ export const DEFAULT_PAYMENT_METHODS = [
     id: 'jazzcash',
     enabled: true,
     label: 'JazzCash',
-    accountNumber: '03001234567',
+    accountNumber: '03001237124',
     accountTitle: 'FOOLISH ARC'
   },
   {
     id: 'easypaisa',
     enabled: true,
     label: 'EasyPaisa',
-    accountNumber: '03451234567',
+    accountNumber: '03001237124',
     accountTitle: 'FOOLISH ARC'
   }
 ];

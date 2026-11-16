@@ -442,7 +442,7 @@ export default function CheckoutModal({
                     onChange={handleInputChange}
                     maxLength={11}
                     required
-                    placeholder="03001234567"
+                    placeholder="03001237124"
                     className={`w-full rounded-xl bg-[#FAF9F6] dark:bg-[#201A16] border p-3 text-xs font-mono font-bold text-[#1C1612] dark:text-white focus:outline-none focus:border-[#9A6E3E] focus:ring-2 focus:ring-[#9A6E3E]/20 transition shadow-inner ${
                       formErrors.phone ? 'border-red-500 bg-red-50/20' : 'border-[#D8CEBF] dark:border-[#382F26]'
                     }`}
@@ -749,7 +749,7 @@ export default function CheckoutModal({
                           value={jazzcashPhone}
                           onChange={(e) => setJazzcashPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))}
                           maxLength={11}
-                          placeholder="03001234567"
+                          placeholder="03001237124"
                           className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-red-500 shadow-inner"
                         />
                       </div>
@@ -801,7 +801,7 @@ export default function CheckoutModal({
                         value={easypaisaPhone}
                         onChange={(e) => setEasypaisaPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))}
                         maxLength={11}
-                        placeholder="03451234567"
+                        placeholder="03001237124"
                         className="w-full rounded-xl bg-white dark:bg-[#1A1613] border border-[#D8CEBF] dark:border-[#382F26] p-3 text-xs font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-inner"
                       />
                     </div>
