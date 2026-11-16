@@ -5,6 +5,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import ProductCard from '../components/ProductCard';
 import SymbioteButton from '../components/SymbioteButton';
+import SEOHead from '../components/SEOHead';
+import { SITE_HOST } from '../utils/seoHead';
 
 /**
  * ProductDetailPage - Outfitters-Style Full-Page Product Detail View
@@ -62,6 +64,14 @@ export default function ProductDetailPage({
   if (!product) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 bg-white dark:bg-onyx-950 text-center">
+        <SEOHead
+          title="Garment Not Found | FOOLISH ARC"
+          description="The requested atelier piece is unavailable or has been archived from this collection."
+          canonical="/404"
+          ogTitle="Garment Not Found | FOOLISH ARC"
+          ogDescription="The requested atelier piece is unavailable or has been archived from this collection."
+          noIndex
+        />
         <h1 className="text-2xl font-bold uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-2">
           Garment Not Found
         </h1>
@@ -112,6 +122,86 @@ export default function ProductDetailPage({
 
   return (
     <div className="bg-white dark:bg-onyx-950 min-h-screen pt-24 pb-20 select-none">
+      <SEOHead
+        title={`${product.name} | ${product.fitLine || product.category || "Apparel"} for ${product.person || product.gender || ""} | FOOLISH ARC`}
+        description={
+          product.description ||
+          `Discover ${product.name} at FOOLISH ARC. ${product.fitLine || product.category || "Apparel"} for ${product.person || product.gender || ""}. Shop online in Pakistan.`
+        }
+        canonical={`/product/${encodeURIComponent(product.id)}`}
+        ogType="product"
+        ogTitle={product.name}
+        ogDescription={product.description}
+        ogImage={
+          product.images && product.images.length > 0
+            ? product.images[0]
+            : product.image || "/images/catalog/men_barrel_jeans_flat.jpg"
+        }
+        twitterTitle={product.name}
+        twitterDescription={product.description}
+        twitterImage={
+          product.images && product.images.length > 0
+            ? product.images[0]
+            : product.image || "/images/catalog/men_barrel_jeans_flat.jpg"
+        }
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Product",
+              name: product.name,
+              description: product.description,
+              image:
+                product.images && product.images.length > 0
+                  ? product.images.map((img) => `${SITE_HOST}${img}`)
+                  : [product.image || `${SITE_HOST}/images/catalog/men_barrel_jeans_flat.jpg`],
+              brand: {
+                "@type": "Brand",
+                name: "FOOLISH ARC",
+              },
+              category: product.category || product.collection || "Apparel",
+              sku: product.id,
+              mpn: product.id,
+              url: `${SITE_HOST}/product/${encodeURIComponent(product.id)}`,
+              offers: {
+                "@type": "Offer",
+                url: `${SITE_HOST}/product/${encodeURIComponent(product.id)}`,
+                priceCurrency: "PKR",
+                price: String(product.price),
+                priceValidUntil: null,
+                availability:
+                  currentStock > 0
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock",
+                itemCondition: "https://schema.org/NewCondition",
+              },
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: `${SITE_HOST}/`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: String(product.person || product.category || "COLLECTION").toUpperCase(),
+                  item: `${SITE_HOST}/shop`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: product.name,
+                  item: `${SITE_HOST}/product/${encodeURIComponent(product.id)}`,
+                },
+              ],
+            },
+          ],
+        }}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Editorial Breadcrumbs */}

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { submitContactInquiry } from '../services/api';
 import SymbioteButton from '../components/SymbioteButton';
+import SEOHead from '../components/SEOHead';
+import { PAGE_META } from '../utils/seoHead';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', orderNumber: '', message: '' });
@@ -47,6 +49,16 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-onyx-950 text-neutral-900 dark:text-neutral-100 transition-colors py-12 sm:py-20 select-none">
+      <SEOHead
+        title={PAGE_META.contact.title}
+        description={PAGE_META.contact.description}
+        canonical={PAGE_META.contact.canonical}
+        ogType={PAGE_META.contact.ogType}
+        ogTitle="Contact FOOLISH ARC Atelier | Customer Care"
+        ogDescription="Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Gulberg, Lahore available by request."
+        ogImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+        twitterImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+      />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 space-y-16">
         
         {/* Header */}

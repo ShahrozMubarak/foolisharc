@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import ScrollReveal from '../components/ScrollReveal';
 import TypewriterHeadline from '../components/TypewriterHeadline';
+import SEOHead from '../components/SEOHead';
+import { PAGE_META } from '../utils/seoHead';
 import { subscribeNewsletter } from '../services/api';
 import SymbioteButton from '../components/SymbioteButton';
 
@@ -161,6 +163,16 @@ export default function HomePage({
 
   return (
     <div className="min-h-screen bg-white dark:bg-onyx-950 text-black dark:text-white transition-colors">
+      <SEOHead
+        title={PAGE_META.home.title}
+        description={PAGE_META.home.description}
+        canonical={PAGE_META.home.canonical}
+        ogType={PAGE_META.home.ogType}
+        ogTitle="FOOLISH ARC (Folish Arc) | Official Luxury Pret & Atelier Fashion"
+        ogDescription="Official FOOLISH ARC Store. Slow luxury pret, barrel denim, and bespoke atelier fashion crafted from organic Belgian linen and Mongolian camel cashmere."
+        ogImage={`${PAGE_META.home.canonical ? "https://foolisharc.com" : ""}/images/editorial_camel_banner.jpg`}
+        twitterImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+      />
       
       {/* =========================================================================
           1. INTEGRATED SEAMLESS STUDIO MODEL VIDEO HERO

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { COLOR_PALETTE_INFO } from '../data/products';
+import SEOHead from '../components/SEOHead';
+import { PAGE_META } from '../utils/seoHead';
 
 export default function AboutPage() {
   const [copiedHex, setCopiedHex] = useState(null);
@@ -61,6 +63,16 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-onyx-950 text-neutral-900 dark:text-neutral-100 transition-colors py-12 sm:py-20 select-none">
+      <SEOHead
+        title={PAGE_META.story.title}
+        description={PAGE_META.story.description}
+        canonical={PAGE_META.story.canonical}
+        ogType={PAGE_META.story.ogType}
+        ogTitle="FOOLISH ARC Atelier | Architectural Slow Luxury Pret"
+        ogDescription="FOOLISH ARC crafts high-character, permanent garments in an intentional four-tone earth palette. Private sittings in Gulberg, Lahore by appointment."
+        ogImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+        twitterImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+      />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 space-y-24 sm:space-y-32">
         
         {/* =========================================================================

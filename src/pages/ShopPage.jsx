@@ -5,6 +5,8 @@ import CategoryFilter, {
   SLOT_FILTERS,
 } from '../components/CategoryFilter';
 import ProductCard from '../components/ProductCard';
+import SEOHead from '../components/SEOHead';
+import { PAGE_META, SITE_HOST } from '../utils/seoHead';
 
 export default function ShopPage({
   products = [],
@@ -79,6 +81,46 @@ export default function ShopPage({
   }, [products, query, gender, category, saved, wishlist, size, sort]);
   return (
     <div className="min-h-screen py-8 sm:py-12 bg-white dark:bg-onyx-950 text-black dark:text-white">
+      <SEOHead
+        title={
+          gender === "women"
+            ? PAGE_META.shopWomen.title
+            : gender === "men"
+            ? PAGE_META.shopMen.title
+            : PAGE_META.shop.title
+        }
+        description={
+          gender === "women"
+            ? PAGE_META.shopWomen.description
+            : gender === "men"
+            ? PAGE_META.shopMen.description
+            : PAGE_META.shop.description
+        }
+        canonical={
+          gender === "women"
+            ? PAGE_META.shopWomen.canonical
+            : gender === "men"
+            ? PAGE_META.shopMen.canonical
+            : PAGE_META.shop.canonical
+        }
+        ogType={PAGE_META.shop.ogType}
+        ogTitle={
+          gender === "women"
+            ? "Women's Pret Collection | FOOLISH ARC"
+            : gender === "men"
+            ? "Men's Collection | FOOLISH ARC"
+            : "FOOLISH ARC Collection | Men's & Women's Clothing"
+        }
+        ogDescription={
+          gender === "women"
+            ? "Explore women's shirts, denim, tops and tailored trousers at FOOLISH ARC."
+            : gender === "men"
+            ? "Explore men's shirts, T-shirts, linen styles and contemporary denim at FOOLISH ARC."
+            : "Explore the full FOOLISH ARC collection — shirts, denim, linen trousers and everyday fashion."
+        }
+        ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
+        twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
+      />
       <div className="max-w-[1500px] mx-auto px-4 sm:px-8 lg:px-12">
         <header className="collection-intro collection-intro-no-img mb-6">
           <div className="collection-copy">

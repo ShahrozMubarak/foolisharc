@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../components/BrandLogo';
+import SEOHead from '../components/SEOHead';
 
 /**
  * NotFoundPage - Editorial Luxury 404 Experience
@@ -10,6 +11,14 @@ import BrandLogo from '../components/BrandLogo';
 export default function NotFoundPage({ onOpenAuthModal }) {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-16 bg-white dark:bg-onyx-950 text-black dark:text-white transition-colors select-none">
+      <SEOHead
+        title="Page Not Found | FOOLISH ARC"
+        description="The page you are looking for does not exist, has been archived, or access is restricted."
+        canonical="/404"
+        ogTitle="Page Not Found | FOOLISH ARC"
+        ogDescription="The page you are looking for does not exist, has been archived, or access is restricted."
+        noIndex
+      />
       <div className="max-w-md w-full text-center space-y-6">
         
         {/* Monogram Mark */}
