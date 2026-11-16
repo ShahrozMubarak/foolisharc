@@ -168,8 +168,8 @@ export default function HomePage({
         description={PAGE_META.home.description}
         canonical={PAGE_META.home.canonical}
         ogType={PAGE_META.home.ogType}
-        ogTitle="FOOLISH ARC | Official Luxury Pret & Atelier Fashion"
-        ogDescription="Official FOOLISH ARC Store. Slow luxury pret, barrel denim, and bespoke atelier fashion crafted from organic Belgian linen and Mongolian camel cashmere."
+        ogTitle="FOOLISH ARC | Official Store — Wear Less, Choose Pieces That Last Longer"
+        ogDescription="Official FOOLISH ARC Store. Architectural slow luxury pret, barrel denim, linen atelier tailoring and permanent wardrobe pieces. Wear Less, Choose Pieces That Last Longer."
         ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
         twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
       />
@@ -218,9 +218,9 @@ export default function HomePage({
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black uppercase tracking-tight text-black dark:text-white leading-tight min-h-[1.25em] flex items-center justify-center">
             <TypewriterHeadline
               words={[
-                "WEAR LESS, WEAR LONGER.",
-                "SLOW LUXURY.",
-                "WEAR LESS, WEAR LONGER."
+                "WEAR LESS, CHOOSE PIECES THAT LAST LONGER.",
+                "SLOW LUXURY PRET.",
+                "WEAR LESS, CHOOSE PIECES THAT LAST LONGER."
               ]}
               typingSpeed={75}
               deletingSpeed={35}
@@ -566,7 +566,7 @@ export default function HomePage({
       <div className="divider-wood max-w-6xl mx-auto my-6 sm:my-8" />
 
       {/* =========================================================================
-          7.5. ATELIER SEO EDIT & BRAND STORY (FOOLISH ARC / FOLISH ARC)
+          7.5. ATELIER SEO EDIT & BRAND STORY (FOOLISH ARC OFFICIAL)
       ========================================================================= */}
       <section className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-12 border-t border-[#7A4B26]/10 text-neutral-800 dark:text-neutral-200">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -577,6 +577,9 @@ export default function HomePage({
             <h2 className="text-2xl sm:text-3xl font-serif font-black uppercase tracking-tight text-black dark:text-white">
               FOOLISH ARC: Slow Luxury Pret &amp; Architectural Apparel
             </h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#8C6A3E] dark:text-[#E6D3B3] pt-1">
+              Wear Less, Choose Pieces That Last Longer.
+            </p>
           </div>
             <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 font-normal text-center sm:text-left">
               Welcome to the official <strong>FOOLISH ARC</strong> store. Rooted in architectural minimalism and artisanal craftsmanship, FOOLISH ARC designs slow-fashion capsule collections woven from raw botanical fibers, European flax linen, and 13.5oz ring-spun cotton barrel denim.

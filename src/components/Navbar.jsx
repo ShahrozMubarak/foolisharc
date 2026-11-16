@@ -54,12 +54,15 @@ export default function Navbar({
         </div>
 
         {/* Bold Center Navigation */}
-        <nav className="hidden md:flex items-center space-x-8 lg:space-x-10">
+        <nav className="hidden md:flex items-center space-x-7 lg:space-x-8">
           {[['Women', 'women'], ['Men', 'men'], ['Collection', '']].map(([name, cat]) => {
             const active = location.pathname === '/shop' && (new URLSearchParams(location.search).get('cat') || '') === cat;
             return <Link key={name} to={cat ? '/shop?cat=' + cat : '/shop'} aria-current={active ? 'page' : undefined}
               className={navLinkClass({ isActive: active })}>{name}</Link>;
           })}
+          <NavLink to="/story" className={navLinkClass}>
+            Story
+          </NavLink>
           <NavLink to="/track" className={navLinkClass}>
             Track Order
           </NavLink>
@@ -283,6 +286,13 @@ export default function Navbar({
             className="block text-black dark:text-white py-1"
           >
             Collection
+          </NavLink>
+          <NavLink
+            to="/story"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-black dark:text-white py-1"
+          >
+            Story
           </NavLink>
           <NavLink
             to="/track"

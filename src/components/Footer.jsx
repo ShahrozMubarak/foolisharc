@@ -82,6 +82,16 @@ export default function Footer({ onOpenSizeGuide }) {
                     Men's Denim
                   </Link>
                 </li>
+                <li>
+                  <Link to="/shop?cat=kids" className="hover:text-white transition">
+                    Kids' Collection
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/story" className="hover:text-white transition">
+                    Atelier Story
+                  </Link>
+                </li>
               </ul>
             </div>
 

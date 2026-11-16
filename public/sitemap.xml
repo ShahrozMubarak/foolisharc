@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.foolisharc.com/</loc>
     <lastmod>2026-11-16</lastmod>
@@ -77,155 +77,285 @@
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/heritage_trench_coat.jpg</image:loc>
+      <image:title>Heritage Trench Coat</image:title>
+      <image:caption>Architectural longline trench coat tailored from water-repellent organic cotton gabardine with storm flaps and belted waist.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/camel_cashmere_knit.jpg</image:loc>
+      <image:title>Pure Mongolian Camel Cashmere Knit</image:title>
+      <image:caption>Soft ribbing, an easy crew neckline, and breathable warmth spun from sustainably combed Mongolian camel and cashmere fibers.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-03</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/women_camel_palazzo.jpg</image:loc>
+      <image:title>Camel Pleated Wide-Leg Palazzo Trouser</image:title>
+      <image:caption>High-waisted double-pleated palazzo trousers with a fluid wide leg for unhurried days and elevated evening drape.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-04</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/couture_silk_dress.jpg</image:loc>
+      <image:title>Silk Minimalist Midi Column Dress</image:title>
+      <image:caption>An effortless bias-cut midi column silhouette with understated seam work, ready for wherever the day goes.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-05</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/women_olive_silk_shirt.jpg</image:loc>
+      <image:title>Atelier Studio Silk-Cotton Shirt</image:title>
+      <image:caption>A clean button-up tailored from silk-cotton voile with concealed placket and mother-of-pearl buttons.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-06</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/women_onyx_blazer.jpg</image:loc>
+      <image:title>The Modern Tailored Blazer</image:title>
+      <image:caption>A considered finishing layer with soft canvas shoulders, horn buttons, and an easy single-breasted silhouette.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-07</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/men_linen_shirt.jpg</image:loc>
+      <image:title>The Essential Atelier Overshirt</image:title>
+      <image:caption>A clean spread collar and relaxed everyday shape crafted from brushed cotton-wool twill.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-08</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/men_camel_trouser.jpg</image:loc>
+      <image:title>The Daily Tailored Trouser</image:title>
+      <image:caption>A straight leg trouser with a considered, easy finish and crisp front crease.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-13</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_white_tee_flat.jpg</image:loc>
+      <image:title>Junior Everyday Organic Tee</image:title>
+      <image:caption>Simple, soft, and durable combed organic cotton tee designed for everyday comfort.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/forme-14</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_barrel_jeans_flat.jpg</image:loc>
+      <image:title>Junior Adventure Chino Shorts</image:title>
+      <image:caption>Relaxed pull-on cotton twill shorts with comfort waistband for everyday exploring.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-jeans-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_barrel_jeans_flat.jpg</image:loc>
+      <image:title>BARREL FIT JEANS</image:title>
+      <image:caption>Curved barrel silhouette crafted from 13.5oz ring-spun authentic washed cotton denim. Features ergonomic outer seam curvature, vintage whiskering, and branded metal rivet detailing.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-jeans-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_baggy_black_jeans_flat.jpg</image:loc>
+      <image:title>BAGGY FIT JEANS</image:title>
+      <image:caption>Relaxed skater-inspired baggy denim cut with generous volume through the thigh and calf. Mineral enzyme wash gives a soft lived-in drape from day one.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-jeans-03</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_model_white_tee_jeans.jpg</image:loc>
+      <image:title>WIDE LEG JEANS</image:title>
+      <image:caption>Contemporary wide-leg denim engineered with a straight drop from hip to hem. Pairs effortlessly with clean oversized white tees and workwear jackets.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-jeans-04</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_model_carpenter.jpg</image:loc>
+      <image:title>STRAIGHT FIT CARPENTER JEANS</image:title>
+      <image:caption>Heritage workwear carpenter jeans equipped with authentic utility pocket detailing, hammer loop, reinforced bar-tacks, and triple-needle chain stitching.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-jeans-05</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_model_balloon_indigo.jpg</image:loc>
+      <image:title>BALLOON FIT JEANS</image:title>
+      <image:caption>Architectural balloon silhouette featuring an exaggerated rounded volume around the knee and an intentional tapered cuff that neatly frames sneakers.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-tee-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_white_tee_flat.jpg</image:loc>
+      <image:title>HEAVYWEIGHT BOXY T-SHIRT</image:title>
+      <image:caption>Engineered from ultra-dense 280 GSM combed organic cotton. Features a thick 1.2-inch ribbed collar that holds shape permanently, dropped shoulders, and a clean boxy torso.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-tee-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_model_carpenter.jpg</image:loc>
+      <image:title>OVERSIZED MINERAL T-SHIRT</image:title>
+      <image:caption>Washed earth-tone tee pigment-dyed for vintage variation. Cut with drop shoulders, relaxed long sleeves, and buttery soft pre-shrunk cotton jersey.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/men-shirt-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_model_sage_shirt.jpg</image:loc>
+      <image:title>RELAXED SAGE LINEN SHIRT</image:title>
+      <image:caption>Woven from breathable Normandy flax linen with a smooth enzyme-softened finish. Features natural mother-of-pearl buttons, curved hem, and a structured spread collar.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-jeans-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_wide_leg_jeans_flat.jpg</image:loc>
+      <image:title>HIGH-RISE WIDE LEG JEANS</image:title>
+      <image:caption>Sculpted high-rise waistline contouring smoothly into an effortless wide-leg drape. Premium 100% cotton denim gives structural elegance without sagging.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-jeans-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_model_jeans_shirt.jpg</image:loc>
+      <image:title>STRAIGHT LEG VINTAGE JEANS</image:title>
+      <image:caption>The quintessential 90s vintage straight cut with a flattering mid-to-high rise. Engineered with subtle natural fading along the thighs and classic 5-pocket construction.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-pant-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_model_camel_trouser.jpg</image:loc>
+      <image:title>PLEATED TAILORED TROUSERS</image:title>
+      <image:caption>Tailored high-waisted trousers with razor-sharp front pleats and side slash pockets. Fluid suiting twill provides an elegant drape whether worn with heels or flats.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-pant-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_linen_trousers_flat.jpg</image:loc>
+      <image:title>RELAXED PLEATED LINEN TROUSERS</image:title>
+      <image:caption>Breezy warm-weather trousers tailored from 100% natural European flax linen. Elasticated drawcord waistband with elegant front pleats for all-day effortless comfort.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-shirt-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_white_shirt_flat.jpg</image:loc>
+      <image:title>OVERSIZED CRISP POPLIN SHIRT</image:title>
+      <image:caption>The modern wardrobe foundation. Tailored from high-thread-count 100% organic cotton poplin with clean French cuffs, structured collar, and an airy relaxed volume.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-shirt-02</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_model_striped_shirt.jpg</image:loc>
+      <image:title>STRIPED RELAXED POPLIN SHIRT</image:title>
+      <image:caption>Chic Parisian blue and white bengal stripe shirt with dropped shoulders, elongated sleeves, and a clean forward point collar. Perfect half-tucked into denim or linen trousers.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-jeans-03</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/men_baggy_black_jeans_flat.jpg</image:loc>
+      <image:title>BAGGY SLOUCH JEANS</image:title>
+      <image:caption>Low-slung relaxed slouch jeans featuring an authentic washed charcoal fade. Wide leg profile that puddles cleanly over heels or sneakers.</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://www.foolisharc.com/product/women-tee-01</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://www.foolisharc.com/images/catalog/women_model_camel_trouser.jpg</image:loc>
+      <image:title>MINIMALIST RIBBED TANK TOP</image:title>
+      <image:caption>Sleek high-neck ribbed tank cut from modal cotton blend with shape-retaining recovery. Ideal for pairing with pleated trousers or layered under unbuttoned poplin shirts.</image:caption>
+    </image:image>
   </url>
 </urlset>

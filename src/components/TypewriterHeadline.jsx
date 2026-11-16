@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
  * TypewriterHeadline - Clean luxury character-by-character typing & word-cycling animation
  */
 export default function TypewriterHeadline({
-  words = ["WEAR LESS, WEAR LONGER."],
+  words = ["WEAR LESS, CHOOSE PIECES THAT LAST LONGER."],
   typingSpeed = 80,
   deletingSpeed = 40,
   pauseTime = 3000,

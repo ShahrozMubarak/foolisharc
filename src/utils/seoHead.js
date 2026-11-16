@@ -14,9 +14,9 @@ export function toAbsoluteUrl(url) {
 
 export const PAGE_META = {
   home: {
-    title: "FOOLISH ARC | Premium Men's & Women's Clothing in Pakistan",
+    title: "FOOLISH ARC | Official Store — Wear Less, Choose Pieces That Last Longer",
     description:
-      "Discover contemporary men's and women's clothing at FOOLISH ARC. Shop refined shirts, denim, tailored trousers and timeless everyday fashion.",
+      "Official FOOLISH ARC Store. Architectural slow luxury pret, barrel denim, linen atelier tailoring and permanent wardrobe pieces. Wear Less, Choose Pieces That Last Longer. Shop online in Pakistan.",
     canonical: "/",
     ogType: "website",
   },
