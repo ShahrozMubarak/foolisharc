@@ -4,7 +4,7 @@ import ProductCard from '../components/ProductCard';
 import ScrollReveal from '../components/ScrollReveal';
 import TypewriterHeadline from '../components/TypewriterHeadline';
 import SEOHead from '../components/SEOHead';
-import { PAGE_META } from '../utils/seoHead';
+import { PAGE_META, SITE_HOST } from '../utils/seoHead';
 import { subscribeNewsletter } from '../services/api';
 import SymbioteButton from '../components/SymbioteButton';
 
@@ -168,10 +168,10 @@ export default function HomePage({
         description={PAGE_META.home.description}
         canonical={PAGE_META.home.canonical}
         ogType={PAGE_META.home.ogType}
-        ogTitle="FOOLISH ARC (Folish Arc) | Official Luxury Pret & Atelier Fashion"
+        ogTitle="FOOLISH ARC | Official Luxury Pret & Atelier Fashion"
         ogDescription="Official FOOLISH ARC Store. Slow luxury pret, barrel denim, and bespoke atelier fashion crafted from organic Belgian linen and Mongolian camel cashmere."
-        ogImage={`${PAGE_META.home.canonical ? "https://foolisharc.com" : ""}/images/editorial_camel_banner.jpg`}
-        twitterImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+        ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
+        twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
       />
       
       {/* =========================================================================
@@ -193,8 +193,11 @@ export default function HomePage({
             <source src="/videos/hero_white_model_2.mp4" type="video/mp4" />
             <img
               src="/images/catalog/men_model_white_tee_jeans.jpg"
-              alt="Foolish Arc Model"
+              alt="FOOLISH ARC model wearing barrel fit denim jeans, studio white background"
+              width={1600}
+              height={1200}
               className="w-full h-full object-cover object-top sm:object-center"
+              loading="eager"
             />
           </video>
 
@@ -273,8 +276,11 @@ export default function HomePage({
           {/* Active Slide Image (No Zoom Scale) */}
           <img
             src={bannerSlides[currentSlide].image}
-            alt={bannerSlides[currentSlide].headline}
+            alt={`${bannerSlides[currentSlide].headline} — ${bannerSlides[currentSlide].subtitle} by FOOLISH ARC`}
+            width={1600}
+            height={900}
             className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700 ease-out"
+            loading="eager"
           />
 
           {/* Clickable Image to Collection */}
@@ -407,7 +413,7 @@ export default function HomePage({
             >
               <img
                 src="/images/catalog/men_barrel_jeans_flat.jpg"
-                alt="Barrel Fit Jeans"
+                alt="Men's barrel fit jeans flat lay studio shot by FOOLISH ARC"
                 className="w-full h-full object-cover object-center transition-opacity duration-500"
                 loading="lazy"
               />
@@ -437,7 +443,7 @@ export default function HomePage({
             >
               <img
                 src="/images/catalog/men_model_carpenter.jpg"
-                alt="Carpenter Straight Fit"
+                alt="Men's carpenter straight fit jeans model studio shot by FOOLISH ARC"
                 className="w-full h-full object-cover object-top transition-opacity duration-500"
                 loading="lazy"
               />
@@ -467,7 +473,7 @@ export default function HomePage({
             >
               <img
                 src="/images/catalog/women_model_camel_trouser.jpg"
-                alt="Tailored Camel Trousers"
+                alt="Women's tailored camel trousers model studio shot by FOOLISH ARC"
                 className="w-full h-full object-cover object-top transition-opacity duration-500"
                 loading="lazy"
               />
@@ -572,9 +578,9 @@ export default function HomePage({
               FOOLISH ARC: Slow Luxury Pret &amp; Architectural Apparel
             </h2>
           </div>
-          <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 font-normal text-center sm:text-left">
-            Welcome to the official <strong>FOOLISH ARC</strong> store (also searched by our clients as <strong>Folish Arc</strong> or simply <strong>Foolish</strong>). Rooted in architectural minimalism and artisanal craftsmanship, FOOLISH ARC designs slow-fashion capsule collections woven from raw botanical fibers, European flax linen, and 13.5oz ring-spun cotton barrel denim.
-          </p>
+            <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 font-normal text-center sm:text-left">
+              Welcome to the official <strong>FOOLISH ARC</strong> store. Rooted in architectural minimalism and artisanal craftsmanship, FOOLISH ARC designs slow-fashion capsule collections woven from raw botanical fibers, European flax linen, and 13.5oz ring-spun cotton barrel denim.
+            </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
             <div className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 space-y-1.5">
               <h3 className="font-bold uppercase tracking-wider text-black dark:text-white">Slow Luxury Pret</h3>

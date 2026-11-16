@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { PRODUCTS } from "../src/data/products.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const SITE_HOST = "https://foolisharc.com";
+const SITE_HOST = "https://www.foolisharc.com";
 const TODAY = new Date().toISOString().split("T")[0];
 
 const escapeXml = (text) =>
@@ -18,6 +18,11 @@ const staticUrls = [
   { loc: "/shop?cat=kids", lastmod: TODAY, changefreq: "daily", priority: "0.8" },
   { loc: "/story", lastmod: TODAY, changefreq: "monthly", priority: "0.7" },
   { loc: "/contact", lastmod: TODAY, changefreq: "monthly", priority: "0.7" },
+  { loc: "/privacy", lastmod: TODAY, changefreq: "monthly", priority: "0.6" },
+  { loc: "/terms", lastmod: TODAY, changefreq: "monthly", priority: "0.6" },
+  { loc: "/shipping", lastmod: TODAY, changefreq: "monthly", priority: "0.6" },
+  { loc: "/returns", lastmod: TODAY, changefreq: "monthly", priority: "0.6" },
+  { loc: "/size-guide", lastmod: TODAY, changefreq: "monthly", priority: "0.6" },
 ];
 
 const productUrls = PRODUCTS.map((p) => ({

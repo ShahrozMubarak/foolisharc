@@ -139,6 +139,39 @@ export default function Footer({ onOpenSizeGuide }) {
                 </li>
               </ul>
             </div>
+
+            <div>
+              <p className="text-[#1C1612] mb-3.5 font-sans font-bold uppercase tracking-[0.18em] underline decoration-[#9A6E3E] underline-offset-4">
+                Policy
+              </p>
+              <ul className="space-y-2.5 text-[#2C1F13] font-sans font-semibold normal-case tracking-normal text-sm">
+                <li>
+                  <Link to="/privacy" className="hover:text-white transition">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="hover:text-white transition">
+                    Terms and Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/shipping" className="hover:text-white transition">
+                    Shipping &amp; Delivery
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/returns" className="hover:text-white transition">
+                    Returns &amp; Exchanges
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/size-guide" className="hover:text-white transition">
+                    Size Guide
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
 
         </div>

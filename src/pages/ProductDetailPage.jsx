@@ -241,7 +241,7 @@ export default function ProductDetailPage({
                         : 'border-[#E8E0D5] dark:border-[#332A22] opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt={`${product.name} thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`${product.name} detail view ${idx + 1} by FOOLISH ARC`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -254,7 +254,9 @@ export default function ProductDetailPage({
             >
               <img
                 src={productImages[activeImageIndex] || productImages[0]}
-                alt={product.name}
+                alt={`${product.name} by FOOLISH ARC`}
+                width={800}
+                height={1067}
                 className={`w-full h-full object-cover object-center transition-transform duration-500 ${
                   isZoomed ? 'scale-150 cursor-zoom-out' : 'scale-100'
                 }`}
@@ -288,11 +290,6 @@ export default function ProductDetailPage({
                 <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
                   {formatPrice(product.price)}
                 </span>
-              </div>
-
-              <div className="flex items-center space-x-1 text-xs font-mono text-neutral-600 dark:text-neutral-400">
-                <span className="text-amber-500 font-bold">★ {product.rating || "4.9"}</span>
-                <span>({product.reviewCount || "48"})</span>
               </div>
             </div>
 

@@ -30,6 +30,11 @@ const HomePage = lazy(() => import('./pages/HomePage'));
 import ShopPage from './pages/ShopPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import ShippingPage from './pages/ShippingPage';
+import ReturnsPage from './pages/ReturnsPage';
+import SizeGuidePage from './pages/SizeGuidePage';
 const StudioPage = lazy(() => import('./pages/StudioPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
@@ -736,6 +741,13 @@ export default function App() {
 
             {/* Concierge & Showroom Page */}
             <Route path="/contact" element={<ContactPage />} />
+
+            {/* Trust & Policy Pages */}
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/shipping" element={<ShippingPage />} />
+            <Route path="/returns" element={<ReturnsPage />} />
+            <Route path="/size-guide" element={<SizeGuidePage />} />
 
             {/* Studio / Admin Dashboard Page (Strictly Gated by Owner Email) */}
             <Route

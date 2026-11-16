@@ -130,7 +130,66 @@ export default function ShopPage({
         }
         ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
         twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: `${SITE_HOST}/`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Collection",
+                  item: `${SITE_HOST}/shop`,
+                },
+                ...(gender !== "all"
+                  ? [
+                      {
+                        "@type": "ListItem",
+                        position: 3,
+                        name:
+                          gender === "women"
+                            ? "Women's Collection"
+                            : gender === "men"
+                            ? "Men's Collection"
+                            : "Kids' Collection",
+                        item: `${SITE_HOST}/shop?cat=${gender}`,
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ],
+        }}
       />
+      <nav className="max-w-[1500px] mx-auto px-4 sm:px-8 lg:px-12 flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-neutral-500 mb-6">
+        <Link to="/" className="hover:text-black dark:hover:text-white transition">Home</Link>
+        <span>/</span>
+        <Link
+          to="/shop"
+          className="hover:text-black dark:hover:text-white transition"
+        >
+          Collection
+        </Link>
+        {gender !== "all" && (
+          <>
+            <span>/</span>
+            <span className="text-black dark:text-white font-bold">
+              {gender === "women"
+                ? "Women's Collection"
+                : gender === "men"
+                ? "Men's Collection"
+                : "Kids' Collection"}
+            </span>
+          </>
+        )}
+      </nav>
       <div className="max-w-[1500px] mx-auto px-4 sm:px-8 lg:px-12">
         <header className="collection-intro collection-intro-no-img mb-6">
           <div className="collection-copy">

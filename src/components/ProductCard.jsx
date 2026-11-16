@@ -83,7 +83,9 @@ export default function ProductCard({
         {/* Primary Product Studio Image */}
         <img
           src={primaryImage}
-          alt={product.name}
+          alt={`${product.name} by FOOLISH ARC`}
+          width={400}
+          height={533}
           className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-in-out ${
             isHovered && hoverImage !== primaryImage ? 'opacity-0' : 'opacity-100'
           }`}
@@ -94,7 +96,9 @@ export default function ProductCard({
         {hoverImage !== primaryImage && (
           <img
             src={hoverImage}
-            alt={`${product.name} model view`}
+            alt={`${product.name} model view by FOOLISH ARC`}
+            width={400}
+            height={533}
             className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-in-out ${
               isHovered ? 'opacity-100' : 'opacity-0'
             }`}

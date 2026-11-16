@@ -1,6 +1,6 @@
 // Preferred host — must match Search Console / owner decision.
 // Current canonicals and sitemap.xml use non-www. Confirm with owner before deploying.
-export const SITE_HOST = "https://foolisharc.com";
+export const SITE_HOST = "https://www.foolisharc.com";
 
 export const SITE_NAME = "FOOLISH ARC";
 
@@ -14,9 +14,9 @@ export function toAbsoluteUrl(url) {
 
 export const PAGE_META = {
   home: {
-    title: "FOOLISH ARC Pakistan | Men's & Women's Modern Clothing",
+    title: "FOOLISH ARC | Premium Men's & Women's Clothing in Pakistan",
     description:
-      "Discover men's and women's clothing at FOOLISH ARC. Explore contemporary shirts, denim, linen trousers and everyday fashion. Shop online in Pakistan.",
+      "Discover contemporary men's and women's clothing at FOOLISH ARC. Shop refined shirts, denim, tailored trousers and timeless everyday fashion.",
     canonical: "/",
     ogType: "website",
   },

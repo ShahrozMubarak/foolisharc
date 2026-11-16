@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { submitContactInquiry } from '../services/api';
 import SymbioteButton from '../components/SymbioteButton';
 import SEOHead from '../components/SEOHead';
-import { PAGE_META } from '../utils/seoHead';
+import { PAGE_META, SITE_HOST } from '../utils/seoHead';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', orderNumber: '', message: '' });
@@ -56,8 +56,8 @@ export default function ContactPage() {
         ogType={PAGE_META.contact.ogType}
         ogTitle="Contact FOOLISH ARC Atelier | Customer Care"
         ogDescription="Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Gulberg, Lahore available by request."
-        ogImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
-        twitterImage="https://foolisharc.com/images/editorial_camel_banner.jpg"
+        ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
+        twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
       />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 space-y-16">
         
