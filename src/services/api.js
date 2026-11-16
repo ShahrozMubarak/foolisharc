@@ -246,16 +246,36 @@ export async function submitFitFeedbackToAPI(feedbackPayload) {
 /**
  * PAYMENT METHODS & HEALTH
  */
+export const DEFAULT_PAYMENT_METHODS = [
+  { id: 'cod', enabled: true, label: 'Cash on Delivery' },
+  {
+    id: 'jazzcash',
+    enabled: true,
+    label: 'JazzCash',
+    accountNumber: '03001234567',
+    accountTitle: 'FOOLISH ARC'
+  },
+  {
+    id: 'easypaisa',
+    enabled: true,
+    label: 'EasyPaisa',
+    accountNumber: '03451234567',
+    accountTitle: 'FOOLISH ARC'
+  }
+];
+
 export async function fetchPaymentMethods() {
   try {
     const response = await fetch(`${API_BASE}/payment-methods`, { cache: 'no-store' });
-    if (!response.ok) return [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
+    if (!response.ok) return DEFAULT_PAYMENT_METHODS;
     const data = await response.json();
-    return Array.isArray(data.methods)
-      ? data.methods.filter(method => method && method.enabled)
-      : [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
+    if (Array.isArray(data.methods) && data.methods.length > 0) {
+      const activeMethods = data.methods.filter(method => method && method.enabled !== false);
+      return activeMethods.length > 0 ? activeMethods : DEFAULT_PAYMENT_METHODS;
+    }
+    return DEFAULT_PAYMENT_METHODS;
   } catch {
-    return [{ id: 'cod', enabled: true, label: 'Cash on Delivery' }];
+    return DEFAULT_PAYMENT_METHODS;
   }
 }
 

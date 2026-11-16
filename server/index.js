@@ -175,23 +175,23 @@ function setCustomerSessionCookie(res, user) {
 }
 
 function getPublicPaymentMethods() {
-  const jazzcashNumber = (process.env.PAYMENT_JAZZCASH_ACCOUNT_NUMBER || '').trim();
-  const jazzcashTitle = (process.env.PAYMENT_JAZZCASH_ACCOUNT_TITLE || '').trim();
-  const easypaisaNumber = (process.env.PAYMENT_EASYPAISA_ACCOUNT_NUMBER || '').trim();
-  const easypaisaTitle = (process.env.PAYMENT_EASYPAISA_ACCOUNT_TITLE || '').trim();
+  const jazzcashNumber = (process.env.PAYMENT_JAZZCASH_ACCOUNT_NUMBER || '03001234567').trim();
+  const jazzcashTitle = (process.env.PAYMENT_JAZZCASH_ACCOUNT_TITLE || 'FOOLISH ARC').trim();
+  const easypaisaNumber = (process.env.PAYMENT_EASYPAISA_ACCOUNT_NUMBER || '03451234567').trim();
+  const easypaisaTitle = (process.env.PAYMENT_EASYPAISA_ACCOUNT_TITLE || 'FOOLISH ARC').trim();
 
   return [
     { id: 'cod', enabled: true, label: 'Cash on Delivery' },
     {
       id: 'jazzcash',
-      enabled: Boolean(jazzcashNumber && jazzcashTitle),
+      enabled: process.env.PAYMENT_JAZZCASH_ENABLED !== 'false',
       label: 'JazzCash',
       accountNumber: jazzcashNumber,
       accountTitle: jazzcashTitle
     },
     {
       id: 'easypaisa',
-      enabled: Boolean(easypaisaNumber && easypaisaTitle),
+      enabled: process.env.PAYMENT_EASYPAISA_ENABLED !== 'false',
       label: 'EasyPaisa',
       accountNumber: easypaisaNumber,
       accountTitle: easypaisaTitle

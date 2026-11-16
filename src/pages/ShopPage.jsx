@@ -80,28 +80,6 @@ export default function ShopPage({
   return (
     <div className="min-h-screen py-8 sm:py-12 bg-white dark:bg-onyx-950 text-black dark:text-white">
       <div className="max-w-[1500px] mx-auto px-4 sm:px-8 lg:px-12">
-        <header className="collection-intro">
-          <div className="collection-copy">
-            <p className="atelier-kicker">
-              FOOLISH ARC &nbsp; / &nbsp; Permanent edition
-            </p>
-            <h1>The collection</h1>
-            <p>
-              Explore the cuts, colours and textures of the atelier. Use our precision fit finder to find your bespoke size.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('open-fit-finder'));
-              }}
-              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9A6E3E] hover:underline cursor-pointer"
-            >
-              <span>📏 Find Your Size</span>
-              <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-          <img src="/images/editorial_camel_banner.jpg" alt="" />
-        </header>
         <CategoryFilter
           activeGender={gender}
           activeSlot={category}

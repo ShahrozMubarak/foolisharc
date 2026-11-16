@@ -2,8 +2,8 @@ import React from 'react';
 
 export const GENDER_FILTERS = [
   { id: "all", label: "All Items" },
-  { id: "men", label: "Men's Collection" },
-  { id: "women", label: "Women’s Collection" },
+  { id: "men", label: "Men" },
+  { id: "women", label: "Women" },
   { id: "kids", label: "Kids" }
 ];
 

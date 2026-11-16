@@ -2,7 +2,7 @@ import {priceOrder} from '../utils/pricing';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SymbioteButton from './SymbioteButton';
-import { fetchPaymentMethods } from '../services/api';
+import { fetchPaymentMethods, DEFAULT_PAYMENT_METHODS } from '../services/api';
 
 export default function CheckoutModal({
   isOpen,
@@ -84,7 +84,7 @@ export default function CheckoutModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState([{ id: 'cod', enabled: true, label: 'Cash on Delivery' }]);
+  const [paymentMethods, setPaymentMethods] = useState(DEFAULT_PAYMENT_METHODS);
   const idempotencyRef = useRef(null);
 
   useEffect(() => {
