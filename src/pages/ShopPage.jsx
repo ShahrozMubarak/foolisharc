@@ -87,6 +87,8 @@ export default function ShopPage({
             ? PAGE_META.shopWomen.title
             : gender === "men"
             ? PAGE_META.shopMen.title
+            : gender === "kids"
+            ? PAGE_META.shopKids.title
             : PAGE_META.shop.title
         }
         description={
@@ -94,6 +96,8 @@ export default function ShopPage({
             ? PAGE_META.shopWomen.description
             : gender === "men"
             ? PAGE_META.shopMen.description
+            : gender === "kids"
+            ? PAGE_META.shopKids.description
             : PAGE_META.shop.description
         }
         canonical={
@@ -101,6 +105,8 @@ export default function ShopPage({
             ? PAGE_META.shopWomen.canonical
             : gender === "men"
             ? PAGE_META.shopMen.canonical
+            : gender === "kids"
+            ? PAGE_META.shopKids.canonical
             : PAGE_META.shop.canonical
         }
         ogType={PAGE_META.shop.ogType}
@@ -109,6 +115,8 @@ export default function ShopPage({
             ? "Women's Pret Collection | FOOLISH ARC"
             : gender === "men"
             ? "Men's Collection | FOOLISH ARC"
+            : gender === "kids"
+            ? "Kids Pret Collection | FOOLISH ARC"
             : "FOOLISH ARC Collection | Men's & Women's Clothing"
         }
         ogDescription={
@@ -116,6 +124,8 @@ export default function ShopPage({
             ? "Explore women's shirts, denim, tops and tailored trousers at FOOLISH ARC."
             : gender === "men"
             ? "Explore men's shirts, T-shirts, linen styles and contemporary denim at FOOLISH ARC."
+            : gender === "kids"
+            ? "Explore junior everyday organic tees and tailored chino shorts at FOOLISH ARC."
             : "Explore the full FOOLISH ARC collection — shirts, denim, linen trousers and everyday fashion."
         }
         ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}

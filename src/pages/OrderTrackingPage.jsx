@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import { fetchOrderByNumber, cancelOrder, submitOrderReview } from '../services/api';
 import OrderConfirmationModal from '../components/OrderConfirmationModal';
+import SEOHead from '../components/SEOHead';
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
@@ -195,6 +196,14 @@ export default function OrderTrackingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] dark:bg-onyx-950 text-onyx-950 dark:text-linen-100 transition-colors py-10 sm:py-16">
+      <SEOHead
+        title="Track Order | FOOLISH ARC"
+        description="Track your FOOLISH ARC order consignment and courier delivery status across Pakistan."
+        canonical="/track"
+        ogTitle="Order Tracking | FOOLISH ARC"
+        ogDescription="Track your FOOLISH ARC order consignment status."
+        noIndex={true}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumb & Slogan */}

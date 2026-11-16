@@ -6,6 +6,12 @@ export const SITE_NAME = "FOOLISH ARC";
 
 export const DEFAULT_IMAGE = `${SITE_HOST}/images/editorial_camel_banner.jpg`;
 
+export function toAbsoluteUrl(url) {
+  if (!url) return DEFAULT_IMAGE;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${SITE_HOST}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 export const PAGE_META = {
   home: {
     title: "FOOLISH ARC Pakistan | Men's & Women's Modern Clothing",
@@ -35,6 +41,13 @@ export const PAGE_META = {
     canonical: "/shop?cat=men",
     ogType: "website",
   },
+  shopKids: {
+    title: "Kids Pret & Everyday Wear in Pakistan | FOOLISH ARC",
+    description:
+      "Discover junior everyday organic tees and chino shorts at FOOLISH ARC. Thoughtful, comfortable clothing for kids crafted with natural fabrics.",
+    canonical: "/shop?cat=kids",
+    ogType: "website",
+  },
   story: {
     title: "Atelier Story | Architectural Slow Luxury Pret | FOOLISH ARC",
     description:
@@ -52,18 +65,19 @@ export const PAGE_META = {
 };
 
 export function productMeta(product) {
-  const name = product.name || "Garment";
-  const type = product.fitLine || product.category || "Apparel";
-  const person = product.person || product.gender || "";
+  const name = product?.name || "Garment";
+  const type = product?.fitLine || product?.category || "Apparel";
+  const person = product?.person || product?.gender || "";
   const title = `${name} | ${type} for ${person} | FOOLISH ARC`;
   const description =
-    product.description ||
+    product?.description ||
     `Discover ${name} at FOOLISH ARC. ${type} for ${person}. Shop online in Pakistan.`;
-  const canonical = `/product/${encodeURIComponent(product.id || product.slug || "")}`;
-  const image =
-    (product.images && product.images[0]) ||
-    product.image ||
+  const canonical = `/product/${encodeURIComponent(product?.id || product?.slug || "")}`;
+  const rawImage =
+    (product?.images && product?.images[0]) ||
+    product?.image ||
     DEFAULT_IMAGE;
+  const image = toAbsoluteUrl(rawImage);
   return {
     title,
     description,
@@ -75,8 +89,7 @@ export function productMeta(product) {
   };
 }
 
-let currentCanonical = null;
-let currentJsonLdId = null;
+const DYNAMIC_JSONLD_ID = "seo-dynamic-jsonld";
 
 export function setHeadTags({
   title,
@@ -95,49 +108,53 @@ export function setHeadTags({
   // Title
   if (title) {
     document.title = title;
+    setMeta("title", title);
   }
 
-  // Meta description
+  // Meta description & robots
   setMeta("description", description);
   setMeta("robots", noIndex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1");
 
+  const absOgImage = toAbsoluteUrl(ogImage);
+  const absTwitterImage = toAbsoluteUrl(twitterImage || ogImage);
+  const canonicalUrl = `${SITE_HOST}${canonical || ""}`;
+
   // Open Graph
   setMeta("og:type", ogType, "property");
-  setMeta("og:url", `${SITE_HOST}${canonical || ""}`, "property");
+  setMeta("og:url", canonicalUrl, "property");
   setMeta("og:title", ogTitle || title, "property");
   setMeta("og:description", ogDescription || description, "property");
-  setMeta("og:image", ogImage, "property");
+  setMeta("og:image", absOgImage, "property");
   setMeta("og:image:alt", ogTitle || title || "", "property");
   setMeta("og:site_name", SITE_NAME, "property");
 
   // Twitter
   setMeta("twitter:card", "summary_large_image");
-  setMeta("twitter:url", `${SITE_HOST}${canonical || ""}`, "name");
+  setMeta("twitter:url", canonicalUrl, "name");
   setMeta("twitter:title", twitterTitle || ogTitle || title, "name");
   setMeta("twitter:description", twitterDescription || ogDescription || description, "name");
-  setMeta("twitter:image", twitterImage, "name");
+  setMeta("twitter:image", absTwitterImage, "name");
 
-  // Canonical
-  const canonicalUrl = `${SITE_HOST}${canonical || ""}`;
-  if (currentCanonical) {
-    currentCanonical.remove();
+  // Canonical - Mutate existing or create single element (prevents duplicate canonicals)
+  let canonicalEl = document.querySelector('link[rel="canonical"]');
+  if (canonicalEl) {
+    canonicalEl.setAttribute("href", canonicalUrl);
+  } else {
+    canonicalEl = document.createElement("link");
+    canonicalEl.rel = "canonical";
+    canonicalEl.href = canonicalUrl;
+    document.head.appendChild(canonicalEl);
   }
-  const link = document.createElement("link");
-  link.rel = "canonical";
-  link.href = canonicalUrl;
-  document.head.appendChild(link);
-  currentCanonical = link;
 
-  // JSON-LD
-  if (currentJsonLdId) {
-    const existing = document.getElementById(currentJsonLdId);
-    if (existing) existing.remove();
+  // JSON-LD - Replace or remove dynamically to prevent duplicate or leaking product schemas
+  const existingJsonLd = document.getElementById(DYNAMIC_JSONLD_ID);
+  if (existingJsonLd) {
+    existingJsonLd.remove();
   }
   if (jsonLd) {
     const script = document.createElement("script");
+    script.id = DYNAMIC_JSONLD_ID;
     script.type = "application/ld+json";
-    if (jsonLd.id) script.id = jsonLd.id;
-    currentJsonLdId = jsonLd.id;
     script.textContent = JSON.stringify(jsonLd);
     document.head.appendChild(script);
   }
@@ -154,10 +171,7 @@ function setMeta(name, content, attr = "name") {
   el.setAttribute("content", content);
 }
 
-export function removeJsonLd(id) {
-  if (id) {
-    const existing = document.getElementById(id);
-    if (existing) existing.remove();
-  }
-  currentJsonLdId = null;
+export function removeJsonLd() {
+  const existing = document.getElementById(DYNAMIC_JSONLD_ID);
+  if (existing) existing.remove();
 }

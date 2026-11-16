@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminGate from '../components/AdminGate';
 import { logoutAdmin } from '../services/api';
+import SEOHead from '../components/SEOHead';
 
 function StudioPage({
   orders = [],
@@ -41,6 +42,12 @@ function StudioPage({
     <AdminGate>
       {adminUser => (
         <div className="min-h-screen bg-[#FAF9F6] text-[#1A1A1A] antialiased">
+          <SEOHead
+            title="Atelier Studio Admin | FOOLISH ARC"
+            description="FOOLISH ARC administration portal."
+            canonical="/studio"
+            noIndex={true}
+          />
           <AdminDashboard
             orders={orders}
             onUpdateOrderStatus={onUpdateOrderStatus}

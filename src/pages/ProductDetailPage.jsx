@@ -6,7 +6,8 @@ import { useCurrency } from '../context/CurrencyContext';
 import ProductCard from '../components/ProductCard';
 import SymbioteButton from '../components/SymbioteButton';
 import SEOHead from '../components/SEOHead';
-import { SITE_HOST } from '../utils/seoHead';
+import { SITE_HOST, toAbsoluteUrl } from '../utils/seoHead';
+import { PRODUCTS } from '../data/products';
 
 /**
  * ProductDetailPage - Outfitters-Style Full-Page Product Detail View
@@ -31,8 +32,8 @@ export default function ProductDetailPage({
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
 
-  // Find product by id or slug
-  const product = products.find(p => p.id === id || p.slug === id);
+  // Find product by id or slug (with static catalog fallback for instant SEO & deep-linking)
+  const product = products.find(p => p.id === id || p.slug === id) || PRODUCTS.find(p => p.id === id || p.slug === id);
 
   // Active selections
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -134,15 +135,15 @@ export default function ProductDetailPage({
         ogDescription={product.description}
         ogImage={
           product.images && product.images.length > 0
-            ? product.images[0]
-            : product.image || "/images/catalog/men_barrel_jeans_flat.jpg"
+            ? toAbsoluteUrl(product.images[0])
+            : toAbsoluteUrl(product.image || "/images/catalog/men_barrel_jeans_flat.jpg")
         }
         twitterTitle={product.name}
         twitterDescription={product.description}
         twitterImage={
           product.images && product.images.length > 0
-            ? product.images[0]
-            : product.image || "/images/catalog/men_barrel_jeans_flat.jpg"
+            ? toAbsoluteUrl(product.images[0])
+            : toAbsoluteUrl(product.image || "/images/catalog/men_barrel_jeans_flat.jpg")
         }
         jsonLd={{
           "@context": "https://schema.org",
@@ -153,8 +154,8 @@ export default function ProductDetailPage({
               description: product.description,
               image:
                 product.images && product.images.length > 0
-                  ? product.images.map((img) => `${SITE_HOST}${img}`)
-                  : [product.image || `${SITE_HOST}/images/catalog/men_barrel_jeans_flat.jpg`],
+                  ? product.images.map((img) => toAbsoluteUrl(img))
+                  : [toAbsoluteUrl(product.image || "/images/catalog/men_barrel_jeans_flat.jpg")],
               brand: {
                 "@type": "Brand",
                 name: "FOOLISH ARC",
@@ -168,12 +169,15 @@ export default function ProductDetailPage({
                 url: `${SITE_HOST}/product/${encodeURIComponent(product.id)}`,
                 priceCurrency: "PKR",
                 price: String(product.price),
-                priceValidUntil: null,
                 availability:
                   currentStock > 0
                     ? "https://schema.org/InStock"
                     : "https://schema.org/OutOfStock",
                 itemCondition: "https://schema.org/NewCondition",
+                seller: {
+                  "@type": "Organization",
+                  name: "FOOLISH ARC",
+                },
               },
             },
             {
@@ -188,8 +192,8 @@ export default function ProductDetailPage({
                 {
                   "@type": "ListItem",
                   position: 2,
-                  name: String(product.person || product.category || "COLLECTION").toUpperCase(),
-                  item: `${SITE_HOST}/shop`,
+                  name: product.person === "women" ? "Women's Collection" : product.person === "men" ? "Men's Collection" : "Collection",
+                  item: product.person ? `${SITE_HOST}/shop?cat=${product.person}` : `${SITE_HOST}/shop`,
                 },
                 {
                   "@type": "ListItem",
@@ -208,8 +212,11 @@ export default function ProductDetailPage({
         <nav className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-neutral-500 mb-6">
           <Link to="/" className="hover:text-black dark:hover:text-white transition">Home</Link>
           <span>/</span>
-          <Link to="/shop" className="hover:text-black dark:hover:text-white transition">
-            {String(product.person || "COLLECTION").toUpperCase()}
+          <Link
+            to={product.person ? `/shop?cat=${product.person}` : '/shop'}
+            className="hover:text-black dark:hover:text-white transition"
+          >
+            {product.person === "women" ? "WOMEN" : product.person === "men" ? "MEN" : "COLLECTION"}
           </Link>
           <span>/</span>
           <span className="text-black dark:text-white font-bold line-clamp-1">{product.name}</span>

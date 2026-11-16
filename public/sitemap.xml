@@ -25,6 +25,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://foolisharc.com/shop?cat=kids</loc>
+    <lastmod>2026-11-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://foolisharc.com/story</loc>
     <lastmod>2026-11-16</lastmod>
     <changefreq>monthly</changefreq>

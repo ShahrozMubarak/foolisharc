@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { setHeadTags } from "../utils/seoHead";
+import { setHeadTags, removeJsonLd } from "../utils/seoHead";
 
 export default function SEOHead({
   title,
@@ -30,6 +30,12 @@ export default function SEOHead({
       noIndex,
       jsonLd,
     });
+
+    return () => {
+      if (jsonLd) {
+        removeJsonLd();
+      }
+    };
   }, [
     title,
     description,

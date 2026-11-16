@@ -15,6 +15,7 @@ const staticUrls = [
   { loc: "/shop", lastmod: TODAY, changefreq: "daily", priority: "0.9" },
   { loc: "/shop?cat=women", lastmod: TODAY, changefreq: "daily", priority: "0.8" },
   { loc: "/shop?cat=men", lastmod: TODAY, changefreq: "daily", priority: "0.8" },
+  { loc: "/shop?cat=kids", lastmod: TODAY, changefreq: "daily", priority: "0.8" },
   { loc: "/story", lastmod: TODAY, changefreq: "monthly", priority: "0.7" },
   { loc: "/contact", lastmod: TODAY, changefreq: "monthly", priority: "0.7" },
 ];
