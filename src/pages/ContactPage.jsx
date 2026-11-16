@@ -55,7 +55,7 @@ export default function ContactPage() {
         canonical={PAGE_META.contact.canonical}
         ogType={PAGE_META.contact.ogType}
         ogTitle="Contact FOOLISH ARC Atelier | Customer Care"
-        ogDescription="Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Gulberg, Lahore available by request."
+        ogDescription="Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Johar Town, Lahore available by request."
         ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
         twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
       />
@@ -84,11 +84,11 @@ export default function ContactPage() {
             <div className="p-7 rounded-2xl bg-white dark:bg-[#1A1613] border border-[#E8E0D5] dark:border-[#2C241D] space-y-3 shadow-2xs">
               <h3 className="font-serif text-lg font-bold text-[#1C1612] dark:text-white">FOOLISH ARC Customer Care</h3>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 font-light leading-relaxed">
-                {siteSettings.location || 'Online customer support'}
+                {siteSettings.location || 'Johar Town, Lahore, Pakistan'}
               </p>
               <div className="pt-2 text-xs font-mono space-y-1 text-neutral-700 dark:text-neutral-300">
-                <p>{siteSettings.hours || 'Send us a message and we will get back to you.'}</p>
-                <p></p>
+                <p>{siteSettings.hours || 'Monday – Saturday: 11:00 AM – 8:00 PM (PKT)'}</p>
+                <p>Private appointments & atelier consultations available.</p>
               </div>
             </div>
 

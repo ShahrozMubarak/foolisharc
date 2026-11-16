@@ -69,7 +69,7 @@ export default function AboutPage() {
         canonical={PAGE_META.story.canonical}
         ogType={PAGE_META.story.ogType}
         ogTitle="FOOLISH ARC Atelier | Architectural Slow Luxury Pret"
-        ogDescription="FOOLISH ARC crafts high-character, permanent garments in an intentional four-tone earth palette. Private sittings in Gulberg, Lahore by appointment."
+        ogDescription="FOOLISH ARC crafts high-character, permanent garments in an intentional four-tone earth palette. Private sittings in Johar Town, Lahore by appointment."
         ogImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
         twitterImage={`${SITE_HOST}/images/editorial_camel_banner.jpg`}
       />
@@ -244,7 +244,7 @@ export default function AboutPage() {
         <section className="p-8 sm:p-12 rounded-3xl bg-[#1C1612] text-white border border-[#332A22] shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <span className="text-xs font-mono uppercase tracking-widest text-[#C69F6F] font-semibold block">
-              Private Sittings • Gulberg, Lahore
+              Private Sittings • Johar Town, Lahore
             </span>
             <h2 className="font-serif text-2xl sm:text-3xl font-light tracking-tight text-white">
               Experience the Atelier in Person.

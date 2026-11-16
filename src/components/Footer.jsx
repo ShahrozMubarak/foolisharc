@@ -41,7 +41,7 @@ export default function Footer({ onOpenSizeGuide }) {
 
   const phoneDisplay = siteSettings.phone || '';
   const emailDisplay = siteSettings.email || '';
-  const locationDisplay = siteSettings.location || 'Online Store';
+  const locationDisplay = siteSettings.location || 'Johar Town, Lahore';
   const waCleanPhone = phoneDisplay.replace(/[^0-9]/g, '');
   const hasWhatsAppPhone = waCleanPhone.length >= 10;
 

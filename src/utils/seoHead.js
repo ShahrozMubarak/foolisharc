@@ -51,14 +51,14 @@ export const PAGE_META = {
   story: {
     title: "Atelier Story | Architectural Slow Luxury Pret | FOOLISH ARC",
     description:
-      "FOOLISH ARC atelier in Gulberg, Lahore — architectural slow luxury pret, barrel denim and tailored garments crafted from Belgian linen and Mongolian cashmere. Private sittings by appointment.",
+      "FOOLISH ARC atelier in Johar Town, Lahore — architectural slow luxury pret, barrel denim and tailored garments crafted from Belgian linen and Mongolian cashmere. Private sittings by appointment.",
     canonical: "/story",
     ogType: "website",
   },
   contact: {
     title: "Contact FOOLISH ARC Atelier | Customer Care & Appointments",
     description:
-      "Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Gulberg, Lahore available by request.",
+      "Contact FOOLISH ARC customer care for order, sizing and product inquiries. Private atelier appointments in Johar Town, Lahore available by request.",
     canonical: "/contact",
     ogType: "website",
   },

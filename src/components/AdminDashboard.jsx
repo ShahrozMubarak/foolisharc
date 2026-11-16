@@ -2030,7 +2030,7 @@ FOOLISH ARC Atelier | contact@foolisharc.com
                       type="text"
                       value={siteSettings.location || ''}
                       onChange={(e) => setSiteSettings({ ...siteSettings, location: e.target.value })}
-                      placeholder="e.g. Gulberg III, Lahore, Pakistan"
+                      placeholder="e.g. Johar Town, Lahore, Pakistan"
                       className="w-full px-4 py-3 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#9A6E3E] transition"
                     />
                     <span className="text-[10px] text-neutral-400 font-medium mt-1 block">
